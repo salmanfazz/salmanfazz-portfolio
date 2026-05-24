@@ -1298,7 +1298,7 @@ function StatCard({ label, value, tone, small }) {
         {label}
       </div>
       <div
-        className={`font-medium text-stone-900 tracking-tight ${
+        className={`font-mono font-medium text-stone-900 tracking-tight ${
           small ? "text-lg" : "text-2xl"
         }`}
       >
