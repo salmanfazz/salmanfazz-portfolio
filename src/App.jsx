@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Portfolio — Salman Fauzan Fahri Aulia
  * Single-file React component. Plain JS. Tailwind core utilities only.
  *
@@ -201,7 +201,8 @@ const PROJECTS = [
    PRIMITIVES
    ────────────────────────────────────────────────────────────────────────── */
 
-const accent = "#3B82F6"; // primary blue
+const accent = "#3B82F6"; // blue-500 — text, borders, decorative
+const accentBg = "#1D4ED8"; // blue-700 — button bg with white text (WCAG 5.74:1)
 const accentSoft = "#DBEAFE"; // light blue tint
 
 const SectionMarker = ({ index, label }) => (
@@ -226,7 +227,7 @@ const Chip = ({ children, tone = "default" }) => {
       : undefined;
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 text-xs font-mono rounded-full border cursor-default transition-all duration-150 hover:-translate-y-0.5 hover:bg-blue-50 hover:border-blue-400 ${tones[tone]}`}
+      className={`inline-flex items-center px-2.5 py-2 text-xs font-mono rounded-full border cursor-default transition-all duration-150 hover:-translate-y-0.5 hover:bg-blue-50 hover:border-blue-400 focus:outline-none focus-visible:-translate-y-0.5 focus-visible:bg-blue-50 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-400 ${tones[tone]}`}
       style={style}
     >
       {children}
@@ -237,12 +238,12 @@ const Chip = ({ children, tone = "default" }) => {
 const Button = ({ children, variant = "primary", as = "button", className = "", ...props }) => {
   const Tag = as;
   const base =
-    "inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500";
+    "inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium rounded-full transition-all duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500";
   const variants = {
     primary: "text-white hover:opacity-90",
     ghost: "text-stone-900 border bg-white hover:bg-blue-50",
   };
-  const style = variant === "primary" ? { backgroundColor: accent } : variant === "ghost" ? { borderColor: accent } : undefined;
+  const style = variant === "primary" ? { backgroundColor: accentBg } : variant === "ghost" ? { borderColor: accent } : undefined;
   return (
     <Tag className={`${base} ${variants[variant]} ${className}`} style={style} {...props}>
       {children}
@@ -271,7 +272,7 @@ function Hero({ onViewProjects }) {
       <p className="mt-8 max-w-2xl text-lg sm:text-xl text-stone-700 leading-relaxed">
         AI engineer building computer-vision systems that ship to production.
       </p>
-      <p className="mt-3 max-w-2xl text-base sm:text-lg text-stone-500 leading-relaxed">
+      <p className="mt-3 max-w-2xl text-base sm:text-lg text-stone-600 leading-relaxed">
         Full-stack engineer across mobile, web, and ML — with a strong focus on
         testing and code quality.
       </p>
@@ -562,7 +563,7 @@ function Modal({ open, onClose, project, children }) {
       <div
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-stone-50 w-full sm:max-w-4xl sm:rounded-3xl rounded-t-3xl border border-stone-200 shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden"
+        className="modal-enter relative bg-stone-50 w-full sm:max-w-4xl sm:rounded-3xl rounded-t-3xl border border-stone-200 shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="p-6 sm:p-8 border-b border-stone-200 bg-white">
@@ -878,7 +879,7 @@ function CustomerView({ cart, add, sub, placeOrder, placedOrder, startNewOrder }
           </div>
           <button
             onClick={startNewOrder}
-            className="mt-5 w-full py-2.5 rounded-full text-white text-sm font-medium hover:opacity-90 transition" style={{ backgroundColor: accent }}
+            className="mt-5 w-full py-2.5 rounded-full text-white text-sm font-medium hover:opacity-90 transition" style={{ backgroundColor: accentBg }}
           >
             Start a new order
           </button>
@@ -930,7 +931,7 @@ function CustomerView({ cart, add, sub, placeOrder, placedOrder, startNewOrder }
                   {qty > 0 && (
                     <span
                       className="font-mono text-[10px] px-1.5 py-0.5 rounded-full text-white shrink-0"
-                      style={{ backgroundColor: accent }}
+                      style={{ backgroundColor: accentBg }}
                     >
                       ×{qty}
                     </span>
@@ -996,7 +997,7 @@ function CustomerView({ cart, add, sub, placeOrder, placedOrder, startNewOrder }
           disabled={lines.length === 0}
           onClick={placeOrder}
           className="mt-4 inline-flex items-center justify-center gap-2 w-full py-3 rounded-full text-white text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-          style={{ backgroundColor: accent }}
+          style={{ backgroundColor: accentBg }}
         >
           Place Order
         </button>
@@ -1322,7 +1323,7 @@ function SalesSpark({ series }) {
   const path = points.map(([x, y], i) => (i === 0 ? `M${x} ${y}` : `L${x} ${y}`)).join(" ");
   const area = `${path} L${W} ${H} L0 ${H} Z`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16" preserveAspectRatio="none" role="img" aria-label="7-day sales trend sparkline chart">
       <path d={area} fill={accent} opacity="0.12" />
       <path d={path} fill="none" stroke={accent} strokeWidth="1.6" />
       {points.map(([x, y], i) => (
@@ -1458,7 +1459,7 @@ function AdminOrders({ orders, advanceOrder, markPaid }) {
                   </span>
                   <button
                     onClick={() => markPaid(o.id)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-white text-xs font-medium hover:opacity-90 transition" style={{ backgroundColor: accent }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-white text-xs font-medium hover:opacity-90 transition" style={{ backgroundColor: accentBg }}
                   >
                     Mark Paid
                   </button>
@@ -1618,7 +1619,7 @@ function AffiliateDemo() {
                       ? "text-white border-transparent"
                       : "bg-white text-stone-700 border-stone-300 hover:border-stone-900"
                   }`}
-                  style={on ? { backgroundColor: accent } : undefined}
+                  style={on ? { backgroundColor: accentBg } : undefined}
                 >
                   {t.label}
                 </button>
@@ -1651,7 +1652,7 @@ function AffiliateDemo() {
                     {p.featured && (
                       <span
                         className="font-mono text-[10px] px-1.5 py-0.5 rounded-full text-white uppercase tracking-wider"
-                        style={{ backgroundColor: accent }}
+                        style={{ backgroundColor: accentBg }}
                       >
                         Featured
                       </span>
@@ -1717,7 +1718,7 @@ function AffiliateDemo() {
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                           p.featured ? "" : "bg-stone-200"
                         }`}
-                        style={p.featured ? { backgroundColor: accent } : undefined}
+                        style={p.featured ? { backgroundColor: accentBg } : undefined}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
@@ -1846,7 +1847,7 @@ function AiDetectionDemo() {
             onClick={run}
             disabled={running}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-medium transition disabled:opacity-50"
-            style={{ backgroundColor: accent }}
+            style={{ backgroundColor: accentBg }}
           >
             {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
             {running ? "Running…" : finished ? "Run again" : "Run Detection"}
@@ -1884,7 +1885,7 @@ function AiDetectionDemo() {
                   className={`w-6 h-6 rounded-full flex items-center justify-center transition shrink-0 ${
                     active ? "text-white" : "bg-stone-200 text-stone-500"
                   }`}
-                  style={active ? { backgroundColor: accent } : undefined}
+                  style={active ? { backgroundColor: accentBg } : undefined}
                 >
                   {current ? (
                     <Loader2 size={11} className="animate-spin" />
@@ -1944,7 +1945,7 @@ function AiDetectionDemo() {
                 >
                   <div
                     className="absolute -top-5 left-0 font-mono text-[9px] px-1.5 py-0.5 rounded text-white whitespace-nowrap"
-                    style={{ backgroundColor: accent }}
+                    style={{ backgroundColor: accentBg }}
                   >
                     {b.label} · {b.conf.toFixed(2)}
                   </div>
@@ -2268,7 +2269,20 @@ function Footer() {
 
 export default function Portfolio() {
   const [openId, setOpenId] = useState(null);
+  const [activeSection, setActiveSection] = useState('');
   const projectsRef = useRef(null);
+
+  useEffect(() => {
+    const ids = ['work', 'projects', 'contact'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); });
+      },
+      { rootMargin: '-20% 0px -60% 0px' }
+    );
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, []);
 
   const open = (id) => setOpenId(id);
   const close = () => setOpenId(null);
@@ -2281,6 +2295,12 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 antialiased selection:bg-stone-900 selection:text-stone-50">
+      <a
+        href="#top"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:border focus:border-blue-700 focus:rounded-full focus:text-sm focus:font-medium focus:ring-2 focus:ring-blue-700"
+      >
+        Skip to main content
+      </a>
       {/* Inline keyframes (Tailwind core only) */}
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -2301,7 +2321,14 @@ export default function Portfolio() {
         @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
           .hero-gradient { color: #4F8BE4; -webkit-text-fill-color: currentColor; background-image: none; }
         }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: none; } }
+        .modal-enter { animation: modalIn 0.2s ease-out both; }
         html { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-gradient { animation: none; background-position: 0% 50%; }
+          .animate-fade-in { animation: none; opacity: 1; }
+          .modal-enter { animation: none; }
+        }
       `}</style>
 
       {/* top nav */}
@@ -2312,11 +2339,11 @@ export default function Portfolio() {
             salmanfazz
           </a>
           <div className="hidden sm:flex items-center gap-7 font-mono text-xs uppercase tracking-widest text-stone-500">
-            <a href="#projects" className="hover:text-blue-600 transition">Projects</a>
-            <a href="#work" className="hover:text-blue-600 transition">Work</a>
-            <a href="#contact" className="hover:text-blue-600 transition">Contact</a>
+            <a href="#projects" className={`hover:text-blue-600 transition ${activeSection === 'projects' ? 'text-blue-600 font-medium' : ''}`}>Projects</a>
+            <a href="#work" className={`hover:text-blue-600 transition ${activeSection === 'work' ? 'text-blue-600 font-medium' : ''}`}>Work</a>
+            <a href="#contact" className={`hover:text-blue-600 transition ${activeSection === 'contact' ? 'text-blue-600 font-medium' : ''}`}>Contact</a>
           </div>
-          <Button as="a" href={`mailto:${IDENTITY.email}`} variant="ghost" className="!px-3 !py-1.5 !text-xs">
+          <Button as="a" href={`mailto:${IDENTITY.email}`} variant="ghost" className="!px-3 !py-2 !text-xs">
             Get in touch
           </Button>
         </div>
