@@ -137,7 +137,7 @@ const EXPERIENCE = [
     role: "Mobile Developer (Internship)",
     period: "Oct — Dec 2019",
     bullets: [
-      "Built an Android school-management app (Java) for Telkom School covering schedules, teacher contact, and reminders.",
+      "Built an Android school-management app (Java) for an educational institution covering schedules, teacher contact, and reminders.",
     ],
   },
 ];
