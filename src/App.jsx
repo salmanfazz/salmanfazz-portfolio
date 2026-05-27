@@ -54,7 +54,7 @@ const IDENTITY = {
   github: "github.com/salmanfazz",
   githubUrl: "https://github.com/salmanfazz",
   linkedin: "linkedin.com/in/salmanfazz",
-  linkedinUrl: "https://linkedin.com/in/salmanfazz",
+  linkedinUrl: "https://www.linkedin.com/in/salmanfazz",
 };
 
 const SKILL_GROUPS = [
@@ -118,10 +118,10 @@ const EXPERIENCE = [
       "Maintained a production React Native app at 80% test coverage under a zero-bug policy, clearing SonarQube issues.",
       "Increased test coverage to 80% across a React + NestJS monolith (frontend and backend).",
       "Led a large-scale Flutter 2.8 → 3.7 migration across the application's codebase and dependencies.",
-      "Trained a YOLOv10m object detector on a large custom image dataset, achieving high detection accuracy.",
-      "Exposed it via a FastAPI endpoint feeding a web client that verifies detections against transaction data and auto-fills forms.",
-      "Added OCR + TrOCR text extraction (printed and handwritten); further detection in active development.",
-      "Deployed to production on Linux with Docker and Cloudflare Tunnel.",
+      "Trained a YOLOv10m object detector on a custom image dataset; deployed inference via FastAPI on Linux.",
+      "Integrated the model into a production web client that automates a downstream validation workflow.",
+      "Added OCR + TrOCR text extraction (printed and handwritten) as a second detection layer.",
+      "Containerised with Docker; deployed on a Linux server.",
     ],
   },
   {
@@ -193,7 +193,7 @@ const PROJECTS = [
       "Docker",
       "Cloudflare Tunnel",
     ],
-    ndaNote: "Real system under NDA — demo uses illustrative mock data only.",
+    ndaNote: "Interactive illustration only — the live system is not demoed; all data shown is fictional.",
   },
 ];
 
@@ -201,16 +201,16 @@ const PROJECTS = [
    PRIMITIVES
    ────────────────────────────────────────────────────────────────────────── */
 
-const accent = "#3B82F6"; // blue-500 — text, borders, decorative
+const accent = "#2563EB"; // blue-600 — text, borders, decorative (WCAG AA 4.98:1 on stone-50)
 const accentBg = "#1D4ED8"; // blue-700 — button bg with white text (WCAG 5.74:1)
 const accentSoft = "#DBEAFE"; // light blue tint
 
 const SectionMarker = ({ index, label }) => (
-  <div className="flex items-center gap-3 mb-6 font-mono text-xs tracking-widest uppercase text-stone-500">
+  <h2 className="flex items-center gap-3 mb-6 font-mono text-xs tracking-widest uppercase text-stone-500">
     <span style={{ color: accent }}>§ {index}</span>
     <span className="h-px flex-1 bg-stone-200" />
     <span>{label}</span>
-  </div>
+  </h2>
 );
 
 const Chip = ({ children, tone = "default" }) => {
@@ -282,7 +282,7 @@ function Hero({ onViewProjects }) {
           View Projects
           <span aria-hidden>↓</span>
         </Button>
-        <Button as="a" href={IDENTITY.githubUrl} target="_blank" rel="noreferrer" variant="ghost">
+        <Button as="a" href={IDENTITY.githubUrl} target="_blank" rel="noopener noreferrer" variant="ghost">
           <Github size={16} />
           GitHub
           <ArrowUpRight size={14} />
@@ -319,7 +319,7 @@ const ContactRow = ({ icon, label, value, href, wide }) => {
     </>
   );
   return href ? (
-    <a href={href} target="_blank" rel="noreferrer" className={`group hover:text-stone-900 transition-colors ${wide ? "col-span-2 sm:col-span-2" : ""}`}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`group hover:text-stone-900 transition-colors ${wide ? "col-span-2 sm:col-span-2" : ""}`}>
       {inner}
     </a>
   ) : (
@@ -431,7 +431,7 @@ function EducationAndResearch() {
           <a
             href="https://doi.org/10.32736/sisfokom.v13i3.2214"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="group block"
           >
             <h3 className="text-xl sm:text-2xl text-stone-900 font-medium tracking-tight group-hover:underline decoration-stone-400 underline-offset-4 leading-snug">
@@ -539,7 +539,7 @@ function Modal({ open, onClose, project, children }) {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     // focus close btn after small delay
-    setTimeout(() => closeBtnRef.current?.focus(), 50);
+    requestAnimationFrame(() => closeBtnRef.current?.focus());
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
@@ -2248,7 +2248,7 @@ function Footer() {
               <Mail size={15} />
               {IDENTITY.email}
             </Button>
-            <Button as="a" href={IDENTITY.linkedinUrl} target="_blank" rel="noreferrer" variant="ghost">
+            <Button as="a" href={IDENTITY.linkedinUrl} target="_blank" rel="noopener noreferrer" variant="ghost">
               <Linkedin size={15} />
               LinkedIn
             </Button>

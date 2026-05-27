@@ -4,3 +4,5 @@ dist
 .env.local
 design-extracted
 design-handoff.tar.gz
+
+.vercel
