@@ -48,7 +48,7 @@ import {
 
 const IDENTITY = {
   name: "Salman Fauzan Fahri Aulia",
-  title: "Mobile & AI Engineer",
+  title: "AI & Full-Stack Engineer",
   location: "Bandung, Indonesia",
   email: "salman.fazzz@gmail.com",
   github: "github.com/salmanfazz",
@@ -75,6 +75,19 @@ const SKILL_GROUPS = [
       "OCR",
       "TrOCR",
       "Dataset preparation",
+    ],
+  },
+  {
+    label: "LLMs / Agentic AI",
+    icon: Sparkles,
+    blurb: "Agentic systems that plan, retrieve, and act",
+    items: [
+      "LLMs",
+      "RAG",
+      "Agentic AI",
+      "LangGraph",
+      "Tool calling",
+      "Prompt design",
     ],
   },
   {
@@ -112,15 +125,17 @@ const SKILL_GROUPS = [
 const EXPERIENCE = [
   {
     company: "PT. Neuronworks Indonesia",
-    role: "Mobile Developer",
-    period: "Jan 2025 — Present",
+    role: "Junior Programmer",
+    period: "Jan 2025 — Aug 2026",
+    summary:
+      "Cross-functional role spanning mobile, full-stack, and AI / computer-vision development.",
     bullets: [
       "Maintained a production React Native app at 80% test coverage under a zero-bug policy, clearing SonarQube issues.",
       "Increased test coverage to 80% across a React + NestJS monolith (frontend and backend).",
       "Led a large-scale Flutter 2.8 → 3.7 migration across the application's codebase and dependencies.",
-      "Trained a YOLOv10m object detector on a custom image dataset; deployed inference via FastAPI on Linux.",
-      "Integrated the model into a production web client that automates a downstream validation workflow.",
-      "Added OCR + TrOCR text extraction (printed and handwritten) as a second detection layer.",
+      "Trained a YOLOv10m object detector on a large custom image dataset, achieving high detection accuracy.",
+      "Built a FastAPI inference service feeding a web client that verifies detections against transaction data and auto-fills forms.",
+      "Added OCR + TrOCR text extraction (printed and handwritten); further detection capabilities in active development.",
       "Containerised with Docker; deployed on a Linux server.",
     ],
   },
@@ -143,6 +158,26 @@ const EXPERIENCE = [
 ];
 
 const PROJECTS = [
+  {
+    id: "ai-worker",
+    name: "AI Worker",
+    kind: "Agentic AI · Case Study",
+    summary:
+      "An AI that handles business operations end-to-end — understand, plan, retrieve, reason, act, check, respond — instead of a chatbot that only answers.",
+    topTags: ["LangGraph", "RAG", "Agentic"],
+    stack: [
+      "Python",
+      "LangGraph",
+      "RAG",
+      "Tool calling",
+      "Qwen / DeepSeek",
+      "Supabase",
+      "FastAPI",
+    ],
+    wip: true,
+    ndaNote:
+      "Concept & architecture case study — in active development, not yet shipped.",
+  },
   {
     id: "pos-bakso",
     name: "POS Bakso",
@@ -270,11 +305,12 @@ function Hero({ onViewProjects }) {
       </h1>
 
       <p className="mt-8 max-w-2xl text-lg sm:text-xl text-stone-700 leading-relaxed">
-        AI engineer building computer-vision systems that ship to production.
+        AI engineer. I've shipped computer-vision systems to production, and I'm
+        building agentic AI that does real business work — not just chat.
       </p>
       <p className="mt-3 max-w-2xl text-base sm:text-lg text-stone-600 leading-relaxed">
-        Full-stack engineer across mobile, web, and ML — with a strong focus on
-        testing and code quality.
+        Full-stack across mobile, web, and ML, with a strong focus on testing and
+        code quality.
       </p>
 
       <div className="mt-10 flex flex-wrap items-center gap-3">
@@ -384,8 +420,13 @@ function Experience() {
             <h3 className="text-xl sm:text-2xl text-stone-900 font-medium tracking-tight">
               {e.role}
             </h3>
-            <div className="text-stone-600 mb-4">{e.company}</div>
-            <ul className="space-y-2 max-w-3xl">
+            <div className="text-stone-600">{e.company}</div>
+            {e.summary && (
+              <p className="mt-3 mb-4 text-stone-700 leading-relaxed max-w-3xl">
+                {e.summary}
+              </p>
+            )}
+            <ul className={`space-y-2 max-w-3xl ${e.summary ? "" : "mt-4"}`}>
               {e.bullets.map((b, idx) => (
                 <li key={idx} className="text-stone-700 leading-relaxed flex gap-3">
                   <span className="text-stone-300 select-none mt-1.5">—</span>
@@ -421,6 +462,15 @@ function EducationAndResearch() {
           </div>
           <div className="text-stone-500 mt-3 font-mono text-sm">
             GPA 3.6 / 4.0
+          </div>
+          <div className="mt-6">
+            <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-2">
+              Certifications
+            </div>
+            <ul className="text-stone-600 text-sm space-y-1">
+              <li>Microsoft Certified Educator — Training (2022)</li>
+              <li>Oracle Academy — Java Programming (2019)</li>
+            </ul>
           </div>
         </div>
 
@@ -460,12 +510,22 @@ function ProjectCard({ project, onOpen }) {
       className="group text-left bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 transition-all duration-200 hover:border-blue-400 hover:shadow-[0_10px_40px_-15px_rgba(59,130,246,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex flex-col h-full"
     >
       <div className="flex items-start justify-between mb-6">
-        <div className="font-mono text-xs uppercase tracking-widest text-stone-400">
-          {project.kind}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="font-mono text-xs uppercase tracking-widest text-stone-400">
+            {project.kind}
+          </div>
+          {project.wip && (
+            <span
+              className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border"
+              style={{ borderColor: accent, color: accent }}
+            >
+              In dev
+            </span>
+          )}
         </div>
         <ArrowUpRight
           size={18}
-          className="text-stone-300 group-hover:text-blue-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform"
+          className="text-stone-300 group-hover:text-blue-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform shrink-0"
         />
       </div>
       <h3 className="text-2xl sm:text-3xl text-stone-900 font-medium tracking-tight mb-3">
@@ -477,7 +537,7 @@ function ProjectCard({ project, onOpen }) {
           <Chip key={t}>{t}</Chip>
         ))}
         <span className="ml-auto font-mono text-xs text-stone-400 self-center">
-          View demo →
+          {project.wip ? "View case study →" : "View demo →"}
         </span>
       </div>
     </button>
@@ -490,7 +550,8 @@ function Projects({ onOpen }) {
       <SectionMarker index="04" label="Selected Projects" />
       <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
         <h2 className="text-3xl sm:text-4xl text-stone-900 tracking-tight font-medium max-w-xl">
-          Each card opens a working mock of the real product.
+          Each card opens an interactive demo of the real product — or, for
+          work in progress, a case study.
         </h2>
         <div className="font-mono text-xs text-stone-500">
           {PROJECTS.length} projects · click any card
@@ -2226,6 +2287,148 @@ function ParcelIllustration() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   CASE STUDY — AI WORKER (agentic AI, in development)
+   ────────────────────────────────────────────────────────────────────────── */
+
+const AGENT_LOOP = [
+  { id: "understand", label: "Understand", note: "Read the request and the business context" },
+  { id: "plan", label: "Plan", note: "Decide what actually needs to happen" },
+  { id: "retrieve", label: "Retrieve", note: "Pull the facts before answering" },
+  { id: "reason", label: "Reason", note: "Work out the decision" },
+  { id: "act", label: "Act", note: "Call a tool — book, schedule, update, notify" },
+  { id: "check", label: "Check", note: "Verify the action actually landed" },
+  { id: "respond", label: "Respond", note: "Report back what was done" },
+];
+
+const ACTION_LEVELS = [
+  { tier: "T0", label: "Read-only", ex: "Answer a question, look up a booking", warn: false },
+  { tier: "T1", label: "Reversible write", ex: "Draft a reply, place a tentative hold", warn: false },
+  { tier: "T2", label: "Confirmed action", ex: "Confirm a booking, message a customer", warn: false },
+  { tier: "T3", label: "Human handoff", ex: "Complaints, refunds, high-value decisions", warn: true },
+];
+
+function AiWorkerCaseStudy() {
+  return (
+    <div className="p-5 sm:p-6 space-y-7">
+      {/* Thesis */}
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-2">
+          The idea
+        </div>
+        <p className="text-stone-700 leading-relaxed max-w-2xl">
+          Most &ldquo;AI for business&rdquo; is a chatbot: a question goes in, an
+          answer comes out. An AI Worker owns the whole task — it understands the
+          situation, decides what needs to happen, does it, checks it, and reports
+          back.
+        </p>
+      </div>
+
+      {/* Chatbot vs AI Worker */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="bg-white border border-stone-200 rounded-xl p-4">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-400 mb-2">
+            Chatbot
+          </div>
+          <div className="font-mono text-xs text-stone-500">
+            Customer → Bot → Answer
+          </div>
+        </div>
+        <div className="bg-white border rounded-xl p-4" style={{ borderColor: accent }}>
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest mb-2"
+            style={{ color: accent }}
+          >
+            AI Worker
+          </div>
+          <div className="font-mono text-[11px] text-stone-700 leading-relaxed">
+            Customer → Understand → Plan → Retrieve → Reason → Act → Check →
+            Respond
+          </div>
+        </div>
+      </div>
+
+      {/* The agent loop */}
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-3">
+          The agent loop
+        </div>
+        <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {AGENT_LOOP.map((s, i) => (
+            <li
+              key={s.id}
+              className="p-3 rounded-lg border border-stone-200 bg-white"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className="w-5 h-5 rounded-full text-white font-mono text-[10px] flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: accentBg }}
+                >
+                  {i + 1}
+                </span>
+                <span className="text-sm text-stone-900 font-medium">
+                  {s.label}
+                </span>
+              </div>
+              <div className="text-[11px] text-stone-500 leading-snug">
+                {s.note}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Action levels */}
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-3">
+          Bounded autonomy · action levels
+        </div>
+        <ul className="space-y-1.5">
+          {ACTION_LEVELS.map((a) => (
+            <li
+              key={a.tier}
+              className="flex items-start gap-3 text-xs bg-white border border-stone-200 rounded-lg px-3 py-2"
+            >
+              <span
+                className="font-mono text-[10px] px-1.5 py-0.5 rounded shrink-0 text-white"
+                style={{ backgroundColor: a.warn ? "#b45309" : accentBg }}
+              >
+                {a.tier}
+              </span>
+              <div>
+                <span className="text-stone-800 font-medium">{a.label}</span>
+                <span className="text-stone-500"> — {a.ex}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Target + scope */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Panel title="First market">
+          <p className="text-xs text-stone-600 leading-relaxed">
+            Indonesian Haji &amp; Umrah travel agencies — lead follow-up, booking,
+            scheduling, complaint handling, and operational coordination, not just
+            answering questions.
+          </p>
+        </Panel>
+        <Panel title="What this project covers">
+          <p className="text-xs text-stone-600 leading-relaxed">
+            Market and competitor research, product spec, UX, system and AI
+            architecture, database and API design — business through engineering.
+          </p>
+        </Panel>
+      </div>
+
+      <p className="text-[11px] italic text-stone-500 leading-relaxed max-w-3xl">
+        In active development. This is a concept and architecture case study — the
+        system is not yet shipped and has no customers.
+      </p>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    FOOTER
    ────────────────────────────────────────────────────────────────────────── */
 
@@ -2239,9 +2442,9 @@ function Footer() {
             Let's build something.
           </h2>
           <p className="mt-4 text-stone-600 max-w-md leading-relaxed">
-            Open to full-time, part-time, contract, and remote roles in mobile,
-            computer vision, and full-stack — happy to chat about interesting
-            problems.
+            Open to full-time, part-time, contract, and remote roles in AI
+            engineering, full-stack, and computer vision — happy to chat about
+            interesting problems.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button as="a" href={`mailto:${IDENTITY.email}`}>
@@ -2365,6 +2568,7 @@ export default function Portfolio() {
       </main>
 
       <Modal open={!!project} onClose={close} project={project}>
+        {project?.id === "ai-worker" && <AiWorkerCaseStudy />}
         {project?.id === "pos-bakso" && <PosDemo />}
         {project?.id === "affiliate-reco" && <AffiliateDemo />}
         {project?.id === "ai-detection" && <AiDetectionDemo />}
