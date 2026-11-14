@@ -1,41 +1,124 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-type="software" data-radius="soft" data-ground="sand" data-buttons="solid" data-motion>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Salman Fauzan Fahri Aulia — AI &amp; Full-Stack Engineer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Salman Fauzan Fahri Aulia: AI and full-stack engineer in Bandung</title>
+    <meta name="description" content="Portfolio of an engineer who shipped production computer-vision pipelines (YOLOv10m, OCR, TrOCR) and now builds agentic AI, with full-stack work across mobile and web." />
 
-    <!-- SEO -->
-    <meta name="description" content="Salman Fauzan Fahri Aulia — AI &amp; Full-Stack Engineer based in Bandung. Production computer-vision pipelines (YOLOv10m, OCR/TrOCR), agentic AI, and full-stack across mobile and web." />
-
-    <!-- Open Graph -->
-    <meta property="og:title"       content="Salman Fauzan Fahri Aulia — AI &amp; Full-Stack Engineer" />
-    <meta property="og:description" content="Portfolio — computer-vision pipelines, agentic AI, and full-stack engineering." />
-    <meta property="og:url"         content="https://salmanfazz-portfolio.vercel.app/" />
-    <meta property="og:type"        content="website" />
-    <meta property="og:image"       content="https://salmanfazz-portfolio.vercel.app/og-image.png" />
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card"        content="summary_large_image" />
-    <meta name="twitter:title"       content="Salman Fauzan Fahri Aulia — AI &amp; Full-Stack Engineer" />
-    <meta name="twitter:description" content="Portfolio — computer-vision pipelines, agentic AI, and full-stack." />
-    <meta name="twitter:image"       content="https://salmanfazz-portfolio.vercel.app/og-image.png" />
-
-    <!-- Favicon -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Salman Fauzan Fahri Aulia: AI and full-stack engineer in Bandung" />
+    <meta property="og:description" content="Computer-vision pipelines in production, agentic AI in development, and four projects you can open." />
+    <meta property="og:url" content="https://salmanfazz-portfolio.vercel.app/" />
+    <meta property="og:image" content="https://salmanfazz-portfolio.vercel.app/share.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Salman Fauzan Fahri Aulia: AI and full-stack engineer in Bandung" />
+    <meta name="twitter:description" content="Computer-vision pipelines in production, agentic AI in development, and four projects you can open." />
+    <meta name="twitter:image" content="https://salmanfazz-portfolio.vercel.app/share.jpg" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#fafaf7" />
+    <link rel="canonical" href="https://salmanfazz-portfolio.vercel.app/" />
 
-    <!-- Fonts (async — non-render-blocking) -->
+    <meta name="site-kind" content="software" />
+    <meta name="page-type" content="software" />
+
+    <!-- start.mjs brand: the site's own off-white, ink and blue; pairing "outfit" (Outfit + DM Mono) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    </noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/system.css" />
+    <link rel="stylesheet" href="/assets/ui/cards.css" />
+    <link rel="stylesheet" href="/assets/motion/motion.css" />
+    <link rel="stylesheet" href="/assets/backgrounds/backgrounds.css" />
+    <link rel="stylesheet" href="/assets/layout/layout.css" />
+    <link rel="stylesheet" href="/assets/icons/icon.css" />
+    <style>
+    :root {
+      --p-bg: #fafaf7; --p-surface: #ededea; --p-ink: #1c1917; --p-muted: #57534e;
+      --p-accent: #1d4ed8; --p-accent-ink: #fafaf7; --p-action: #1d4ed8; --p-action-ink: #fafaf7;
+      --p-inv-bg: #1c1917; --p-inv-surface: #292624; --p-inv-ink: #fafaf7; --p-inv-muted: #9d9c99;
+      --p-inv-accent: #fafaf7; --p-inv-accent-ink: #1c1917; --p-inv-action: #fafaf7; --p-inv-action-ink: #1c1917;
+      --font-display: "Outfit", system-ui, sans-serif;
+      --font-text: "Outfit", system-ui, sans-serif;
+      --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --display-weight: 400;
+      --display-tracking: -0.03em;
+      --display-tracking-xl: -0.04em;
+    }
+    </style>
+    <link rel="stylesheet" href="/assets/ui/base.css" />
+    <link rel="stylesheet" href="/assets/ui/window/fragment.css" />
+    <link rel="stylesheet" href="/assets/ui/chat/fragment.css" />
+    <link rel="stylesheet" href="/assets/ui/checklist/fragment.css" />
+    <link rel="stylesheet" href="/assets/ui/pipeline-board/fragment.css" />
+    <link rel="stylesheet" href="/assets/ui/toggles/fragment.css" />
+    <link rel="stylesheet" href="/assets/diagrams/diagram.css" />
+    <!-- the hero's entrance: its words wait for motion.js instead of flashing -->
+    <script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+    <script src="/assets/backgrounds/backgrounds.js"></script>
+    <!-- the dealt moment (liquid-type, in #focus) -->
+    <script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+    <link rel="modulepreload" href="/assets/moments/moments.js" />
+    <link rel="modulepreload" href="/assets/moments/lib.js" />
+    <link rel="modulepreload" href="/assets/moments/liquid-type/moment.js" />
+    <!-- page CSS: what sits inside a visual, one --p-h per card group, and the sections' content heights -->
+    <style>
+      /* the shell is filled by script: until then its empty bar and footer draw nothing, so nothing shifts when the page arrives */
+      header.nav:empty, footer.closing:empty { display: none; }
+      /* the hero's window: the conversation list beside the open thread (sections-library.md, app-frame) */
+      .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); border-radius: var(--u-r); overflow: hidden; }
+      .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+      .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+      .app > .app__pane > .ui-panel { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; }
+      .hero__window { background: var(--ground-bg); }   /* the frame's ground before the effect draws, and where it does not */
+      .hero__window > .ly-piece { --fx-bg: #ffffff; }   /* white UI on the lit ground, as in the cards */
+      @media (max-width: 1023px) { .app.ui { grid-template-columns: minmax(0, 1fr); } .app > .app__pane--list { display: none; } .app > .app__pane + .app__pane { border-left: 0; } }
+      /* Sections are as tall as what they hold; only the hero is one screen. (The kit sets every section to
+         one or two screens; that was dropped on request, because filling the screens left large gaps.) The
+         kit's own paddings stay, so neighbouring sections stand one distance apart all the way down. */
+      main > :is(section, .section):not(.hero), footer.closing { height: auto; min-height: 0; }
+      /* one panel height per card group */
+      #projects .panel { --p-h: 440px; }
+      #projects .grid { row-gap: var(--s-8); }
+      #projects .stage { --fade-h: 40px; }
+      #work .panel { --p-h: 380px; }
+      #work .work-detail { margin-top: var(--s-8); display: grid; gap: var(--s-8); }
+      #education .panel { --p-h: 300px; }
+      #education .dg-node { transition: none; }   /* the paper's diagram is a still (pulse none): its nodes stand in their final colours as it comes into view, with no ease */
+      .menu-card .panel { --p-h: 200px; }
+      .tools-row { display: flex; justify-content: center; gap: var(--s-3); }
+      /* the stack: twenty-four real marks, eight across (four on a small laptop and a tablet, two on a phone) */
+      .ic-grid.tools { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+      @media (max-width: 1279px) { .ic-grid.tools { grid-template-columns: repeat(4, minmax(0, 1fr)); } .ic-grid.tools > .ic-cell { padding: 16px; gap: 10px; } }
+      @media (max-width: 639px) { .ic-grid.tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      .ic-grid.tools .ic-tile > img.ic[src$="/langgraph.svg"] { width: 34px; }   /* a two-to-one pill: a little wider than other landscape marks, so its bird and graph stay readable */
+      #projects .section-head, #stack .section-head { max-width: 960px; } #stack .section-head > p { max-width: none; }
+      #focus .focus-lead { margin-top: var(--s-5); max-width: 36ch; }
+      @media (max-width: 639px) {
+        #projects .panel { --p-h: 220px; } #work .panel { --p-h: 300px; } #education .panel { --p-h: 260px; }
+        .hero .pill .muted { display: none; }   /* a phone's pill keeps its first half, so it stays narrower than half the line */
+        #project-affiliate-reco .ui-win__row:nth-child(n+4) { display: none; }   /* the phone panel holds three rows */
+        #work .panel, #education .panel { background-image: none; }   /* the names under the diagram's tiles stand on the plain ground */
+      }
+      @media (max-width: 359px) { .nav__logo .mark { display: none; } }   /* the narrowest phones: the name without its tile */
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- type: software (a hired AI engineer; the work shown is live product UI, so the tech plan applies)
+         deal: hero centred, nav nav-cards, close close-word (its head row only: the name across it was removed on request), footer footer-statement, rhythm surface-pairs (#stack),
+               buttons solid, mark initial, lit ground sand, effect silk-folds (held still in the hero window),
+               grounds: the flat tokens (the dealt bg-halo and bg-band moved their sections off the screen grid)
+         palette: the site's own off-white #fafaf7, ink #1c1917 and blue #1d4ed8 through start.mjs brand; type outfit
+         moments: liquid-type in #focus (dealt again after marquee-row, whose rail the checker reads as a cut carousel)
+         The shell below is filled by React portals (src/Shell.jsx) before the kit's scripts run. -->
+    <header class="nav"></header>
+    <main id="top"></main>
+    <footer class="footer closing footer--statement" id="contact" aria-labelledby="close-h"></footer>
+
     <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/assets/system.js"></script>
+    <script type="module" src="/assets/motion/motion.js"></script>
+    <script type="module" src="/assets/layout/layout.js"></script>
+    <script type="module" src="/assets/diagrams/mount.js"></script>
   </body>
 </html>

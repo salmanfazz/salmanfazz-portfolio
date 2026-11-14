@@ -1,21 +1,20 @@
 ﻿/**
  * Portfolio — Salman Fauzan Fahri Aulia
- * Single-file React component. Plain JS. Tailwind core utilities only.
  *
- * Stack: React 18 + Tailwind CSS + lucide-react icons.
+ * This file holds the content (DATA), the project modal and the four project
+ * demos. The page itself (nav, hero, sections, footer) is src/Shell.jsx, built
+ * on the design kit in public/assets.
+ *
+ * Stack: React 18 + lucide-react icons. Tailwind styles the demos only
+ * (scoped to .tw-scope, see src/index.css and tailwind.config.js).
  * All state in React (no localStorage / sessionStorage).
  * All demos use mock data + setTimeout-driven state. No network calls.
- *
- * (See run/deploy notes at the bottom of this file.)
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal, flushSync } from "react-dom";
+import Shell from "./Shell.jsx";
 import {
-  ArrowUpRight,
-  Github,
-  Linkedin,
-  Mail,
-  MapPin,
   X,
   Plus,
   Minus,
@@ -31,14 +30,8 @@ import {
   ShieldCheck,
   ClipboardCheck,
   Star,
-  ExternalLink,
   Camera,
-  Sparkles,
   AlertCircle,
-  Smartphone,
-  Eye,
-  Server,
-  Layout,
   Box,
 } from "lucide-react";
 
@@ -48,6 +41,8 @@ import {
 
 const IDENTITY = {
   name: "Salman Fauzan Fahri Aulia",
+  shortName: "Salman Fauzan",
+  headline: "Salman Fauzan, AI engineer in Bandung",
   title: "AI & Full-Stack Engineer",
   location: "Bandung, Indonesia",
   email: "salman.fazzz@gmail.com",
@@ -55,72 +50,88 @@ const IDENTITY = {
   githubUrl: "https://github.com/salmanfazz",
   linkedin: "linkedin.com/in/salmanfazz",
   linkedinUrl: "https://www.linkedin.com/in/salmanfazz",
+  // WhatsApp: the number as the footer prints it, and the chat link (wa.me plus the same digits,
+  // country code first, no plus sign). Change both together.
+  whatsapp: "+62 896-4979-9600",
+  whatsappUrl: "https://wa.me/6289649799600",
 };
 
-const SKILL_GROUPS = [
-  {
-    label: "Mobile",
-    icon: Smartphone,
-    blurb: "Production apps in React Native & Flutter",
-    items: ["React Native", "Flutter (Dart)", "Android (Java)", "Retrofit"],
-  },
-  {
-    label: "AI / Computer Vision",
-    icon: Eye,
-    blurb: "End-to-end detection & text-extraction pipelines",
-    items: [
-      "Python",
-      "YOLOv10m (training & inference)",
-      "OpenCV",
-      "OCR",
-      "TrOCR",
-      "Dataset preparation",
-    ],
-  },
-  {
-    label: "LLMs / Agentic AI",
-    icon: Sparkles,
-    blurb: "Agentic systems that plan, retrieve, and act",
-    items: [
-      "LLMs",
-      "RAG",
-      "Agentic AI",
-      "LangGraph",
-      "Tool calling",
-      "Prompt design",
-    ],
-  },
-  {
-    label: "Backend / API",
-    icon: Server,
-    blurb: "REST services and integrations",
-    items: ["NestJS", "FastAPI", "TypeScript", "Supabase", "REST API", "Zend (PHP)"],
-  },
-  {
-    label: "Frontend",
-    icon: Layout,
-    blurb: "Modern, responsive web UI",
-    items: ["React", "Tailwind CSS", "shadcn/ui"],
-  },
-  {
-    label: "Quality & Tooling",
-    icon: ShieldCheck,
-    blurb: "Testing and code-quality discipline",
-    items: [
-      "SonarQube",
-      "Unit testing (80% coverage)",
-      "Vitest",
-      "Playwright (E2E)",
-      "Agile/Scrum",
-    ],
-  },
-  {
-    label: "DevOps",
-    icon: Box,
-    blurb: "Containerised deployment on Linux",
-    items: ["Docker", "Cloudflare Tunnel", "Linux", "Git"],
-  },
+// The twenty-four tools shown with their real marks, eight to a row (files in public/assets/icons;
+// w and h are each file's own proportions, so the browser reserves its box before it loads).
+// Row one is AI and backend, row two web and mobile, row three testing and operations.
+const STACK_TOOLS = [
+  { name: "Python", icon: "python", w: 40, h: 40, area: "AI and vision" },
+  { name: "OpenCV", icon: "opencv", w: 32, h: 40, shape: "ic-tall", area: "Computer vision" },
+  { name: "YOLOv10m", icon: "ultralytics", w: 40, h: 35, area: "Object detection" },
+  { name: "FastAPI", icon: "fastapi", w: 40, h: 40, area: "Backend" },
+  { name: "Pydantic", icon: "pydantic-icon", w: 40, h: 35, area: "Data validation" },
+  { name: "LangGraph", icon: "langgraph", w: 40, h: 20, shape: "ic-land", area: "Agents" },
+  { name: "PostgreSQL", icon: "postgresql", w: 39, h: 40, area: "Database" },
+  { name: "WhatsApp", icon: "whatsapp", w: 40, h: 40, area: "Cloud API" },
+  { name: "React", icon: "react", w: 40, h: 36, area: "Frontend" },
+  { name: "Next.js", icon: "nextjs", w: 40, h: 40, area: "Frontend" },
+  { name: "TypeScript", icon: "typescript", w: 40, h: 40, area: "Backend" },
+  { name: "NestJS", icon: "nestjs", w: 40, h: 40, area: "Backend" },
+  { name: "Supabase", icon: "supabase", w: 39, h: 40, area: "Backend" },
+  { name: "Tailwind CSS", icon: "tailwindcss", w: 40, h: 24, shape: "ic-land", area: "Frontend" },
+  { name: "shadcn/ui", icon: "shadcnui", w: 40, h: 40, shape: "ic-ink", area: "Frontend" },
+  { name: "Flutter", icon: "flutter", w: 33, h: 40, shape: "ic-tall", area: "Mobile" },
+  { name: "Dart", icon: "dart", w: 40, h: 40, area: "Mobile" },
+  { name: "Android", icon: "android", w: 40, h: 23, shape: "ic-land", area: "Mobile" },
+  { name: "Vitest", icon: "vitest", w: 40, h: 37, area: "Unit tests" },
+  { name: "Playwright", icon: "playwright", w: 40, h: 30, shape: "ic-land", area: "E2E tests" },
+  { name: "SonarQube", icon: "sonarqubeserver", w: 40, h: 40, area: "Code quality" },
+  { name: "Git", icon: "git", w: 40, h: 40, area: "DevOps" },
+  { name: "Docker", icon: "docker", w: 40, h: 29, shape: "ic-land", area: "DevOps" },
+  { name: "Cloudflare", icon: "cloudflare", w: 40, h: 18, shape: "ic-land", area: "Tunnel" },
 ];
+
+// Tools, skills and methods that have no real logo to show: the "Also in the stack" line. Every
+// technology a project or the work history names is either a logo above or a word here.
+const STACK_WORDS = [
+  "OCR",
+  "TrOCR",
+  "RAG",
+  "LiteLLM",
+  "OpenRouter",
+  "FastEmbed",
+  "Tool calling",
+  "Agentic AI",
+  "pgvector",
+  "MinIO",
+  "React Native",
+  "REST API",
+  "Linux",
+  "Dataset preparation",
+  "Unit testing",
+  "Agile/Scrum",
+];
+
+// How a customer question becomes an answer: the customer-inquiry journey of the AI Worker
+// illustrations (public/portfolio-illustrations/application-flow.html), shown in the statement section.
+const AI_WORKER_STEPS = [
+  { id: "ask", label: "Customer asks", note: "A customer reaches the agency on WhatsApp." },
+  { id: "find", label: "Find business knowledge", note: "Taught knowledge is searched by meaning and by keyword." },
+  { id: "draft", label: "Draft and check", note: "A draft is checked against the retrieved sources." },
+  { id: "permit", label: "Check permission to act", note: "Trust rules choose an automatic reply, staff approval or a human handoff." },
+  { id: "reply", label: "Customer receives a reply", note: "The cleared response is delivered through WhatsApp." },
+];
+
+const EDUCATION = {
+  degree: "Bachelor of Engineering (S1), Informatics Engineering",
+  school: "UIN Sunan Gunung Djati Bandung",
+  period: "2020 — 2024",
+  gpa: "GPA 3.6 / 4.0",
+  certifications: [
+    "Microsoft Certified Educator — Training (2022)",
+    "Oracle Academy — Java Programming (2019)",
+  ],
+  publication: {
+    venue: "Publication · SISFOKOM Journal (SINTA 3)",
+    title: "Game and Application Purchasing Patterns on Steam using the K-Means Algorithm",
+    url: "https://doi.org/10.32736/sisfokom.v13i3.2214",
+  },
+};
 
 const EXPERIENCE = [
   {
@@ -163,20 +174,37 @@ const PROJECTS = [
     name: "AI Worker",
     kind: "Agentic AI · Case Study",
     summary:
-      "An AI that handles business operations end-to-end — understand, plan, retrieve, reason, act, check, respond — instead of a chatbot that only answers.",
-    topTags: ["LangGraph", "RAG", "Agentic"],
+      "An AI employee that answers WhatsApp customers for Umrah and Haji travel agencies. It turns an agency's own knowledge into supervised replies and bookings.",
+    topTags: ["FastAPI", "RAG", "Agentic"],
     stack: [
       "Python",
-      "LangGraph",
-      "RAG",
-      "Tool calling",
-      "Qwen / DeepSeek",
-      "Supabase",
       "FastAPI",
+      "LiteLLM / OpenRouter",
+      "Hybrid RAG",
+      "PostgreSQL / pgvector",
+      "Next.js",
     ],
     wip: true,
     ndaNote:
-      "Concept & architecture case study — in active development, not yet shipped.",
+      "Local prototype, November 2026 — illustrated walkthrough, not a live system.",
+  },
+  {
+    id: "ai-detection",
+    name: "AI Detection System",
+    kind: "Computer Vision Pipeline",
+    summary: "AI photo-verification pipeline — object detection, text extraction, and automated validation, illustrated with a generic object.",
+    topTags: ["YOLOv10m", "FastAPI", "TrOCR"],
+    stack: [
+      "Python",
+      "YOLOv10m",
+      "FastAPI",
+      "OpenCV",
+      "OCR",
+      "TrOCR",
+      "Docker",
+      "Cloudflare Tunnel",
+    ],
+    ndaNote: "Interactive illustration only — the live system is not demoed; all data shown is fictional.",
   },
   {
     id: "pos-bakso",
@@ -212,24 +240,6 @@ const PROJECTS = [
       "Playwright",
     ],
   },
-  {
-    id: "ai-detection",
-    name: "AI Detection System",
-    kind: "Computer Vision Pipeline",
-    summary: "AI photo-verification pipeline — object detection, text extraction, and automated validation (illustrated with a generic parcel-delivery example).",
-    topTags: ["YOLOv10m", "FastAPI", "TrOCR"],
-    stack: [
-      "Python",
-      "YOLOv10m",
-      "FastAPI",
-      "OpenCV",
-      "OCR",
-      "TrOCR",
-      "Docker",
-      "Cloudflare Tunnel",
-    ],
-    ndaNote: "Interactive illustration only — the live system is not demoed; all data shown is fictional.",
-  },
 ];
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -240,13 +250,6 @@ const accent = "#2563EB"; // blue-600 — text, borders, decorative (WCAG AA 4.9
 const accentBg = "#1D4ED8"; // blue-700 — button bg with white text (WCAG 5.74:1)
 const accentSoft = "#DBEAFE"; // light blue tint
 
-const SectionMarker = ({ index, label }) => (
-  <h2 className="flex items-center gap-3 mb-6 font-mono text-xs tracking-widest uppercase text-stone-500">
-    <span style={{ color: accent }}>§ {index}</span>
-    <span className="h-px flex-1 bg-stone-200" />
-    <span>{label}</span>
-  </h2>
-);
 
 const Chip = ({ children, tone = "default" }) => {
   const tones = {
@@ -270,307 +273,12 @@ const Chip = ({ children, tone = "default" }) => {
   );
 };
 
-const Button = ({ children, variant = "primary", as = "button", className = "", ...props }) => {
-  const Tag = as;
-  const base =
-    "inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium rounded-full transition-all duration-150 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500";
-  const variants = {
-    primary: "text-white hover:opacity-90",
-    ghost: "text-stone-900 border bg-white hover:bg-blue-50",
-  };
-  const style = variant === "primary" ? { backgroundColor: accentBg } : variant === "ghost" ? { borderColor: accent } : undefined;
-  return (
-    <Tag className={`${base} ${variants[variant]} ${className}`} style={style} {...props}>
-      {children}
-    </Tag>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────────────────
-   HERO
-   ────────────────────────────────────────────────────────────────────────── */
-
-function Hero({ onViewProjects }) {
-  return (
-    <header className="pt-12 pb-10 sm:pt-16 sm:pb-14">
-      <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-6 flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
-        Available for work · Remote &amp; on-site · Bandung, Indonesia
-      </div>
-
-      <h1 className="hero-gradient text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.05] font-semibold">
-        {IDENTITY.name.split(" ").slice(0, 2).join(" ")}
-        <br />
-        <span>{IDENTITY.name.split(" ").slice(2).join(" ")}.</span>
-      </h1>
-
-      <p className="mt-8 max-w-2xl text-lg sm:text-xl text-stone-700 leading-relaxed">
-        AI engineer. I've shipped computer-vision systems to production, and I'm
-        building agentic AI that does real business work — not just chat.
-      </p>
-      <p className="mt-3 max-w-2xl text-base sm:text-lg text-stone-600 leading-relaxed">
-        Full-stack across mobile, web, and ML, with a strong focus on testing and
-        code quality.
-      </p>
-
-      <div className="mt-10 flex flex-wrap items-center gap-3">
-        <Button onClick={onViewProjects}>
-          View Projects
-          <span aria-hidden>↓</span>
-        </Button>
-        <Button as="a" href={IDENTITY.githubUrl} target="_blank" rel="noopener noreferrer" variant="ghost">
-          <Github size={16} />
-          GitHub
-          <ArrowUpRight size={14} />
-        </Button>
-      </div>
-
-      <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-y-4 gap-x-6 max-w-2xl font-mono text-xs">
-        <ContactRow icon={<Mail size={13} />} label="Email" value={IDENTITY.email} href={`mailto:${IDENTITY.email}`} />
-        <ContactRow icon={<MapPin size={13} />} label="Based" value="Bandung, ID" />
-        <ContactRow icon={<Github size={13} />} label="GitHub" value="@salmanfazz" href={IDENTITY.githubUrl} />
-        <ContactRow icon={<Linkedin size={13} />} label="LinkedIn" value="@salmanfazz" href={IDENTITY.linkedinUrl} />
-        <ContactRow
-          icon={<ShieldCheck size={13} />}
-          label="Availability"
-          value="Full-time · Part-time · Contract · Remote"
-          wide
-        />
-      </div>
-    </header>
-  );
-}
-
-const ContactRow = ({ icon, label, value, href, wide }) => {
-  const inner = (
-    <>
-      <div className="text-stone-400 flex items-center gap-1.5 mb-1">
-        {icon}
-        <span className="uppercase tracking-wider">{label}</span>
-      </div>
-      <div className={`text-stone-800 ${wide ? "" : "truncate"} flex items-center gap-1`}>
-        {value}
-        {href && <ArrowUpRight size={11} className="text-stone-400" />}
-      </div>
-    </>
-  );
-  return href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={`group hover:text-stone-900 transition-colors ${wide ? "col-span-2 sm:col-span-2" : ""}`}>
-      {inner}
-    </a>
-  ) : (
-    <div className={wide ? "col-span-2 sm:col-span-2" : ""}>{inner}</div>
-  );
-};
-
-/* ──────────────────────────────────────────────────────────────────────────
-   SKILLS
-   ────────────────────────────────────────────────────────────────────────── */
-
-function Skills() {
-  return (
-    <section className="py-8 sm:py-10">
-      <SectionMarker index="01" label="Stack" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-        {SKILL_GROUPS.map((g) => {
-          const Icon = g.icon;
-          return (
-            <div key={g.label}>
-              <div className="flex items-center gap-2 mb-1">
-                <Icon size={14} className="text-stone-700" />
-                <div className="font-mono text-xs uppercase tracking-widest text-stone-700">
-                  {g.label}
-                </div>
-              </div>
-              <div className="text-[12px] text-stone-500 mb-3 leading-snug">
-                {g.blurb}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {g.items.map((it) => (
-                  <Chip key={it}>{it}</Chip>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   EXPERIENCE
-   ────────────────────────────────────────────────────────────────────────── */
-
-function Experience() {
-  return (
-    <section className="py-8 sm:py-10">
-      <SectionMarker index="02" label="Work" />
-      <ol className="relative ml-3" style={{ borderLeft: "1px solid #DBEAFE" }}>
-        {EXPERIENCE.map((e, i) => (
-          <li key={e.company} className="pl-8 pb-12 last:pb-0 relative">
-            <span
-              className="absolute -left-[7px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-stone-50"
-              style={{ backgroundColor: i === 0 ? accent : "#BFDBFE" }}
-              aria-hidden
-            />
-            <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-2">
-              {e.period}
-            </div>
-            <h3 className="text-xl sm:text-2xl text-stone-900 font-medium tracking-tight">
-              {e.role}
-            </h3>
-            <div className="text-stone-600">{e.company}</div>
-            {e.summary && (
-              <p className="mt-3 mb-4 text-stone-700 leading-relaxed max-w-3xl">
-                {e.summary}
-              </p>
-            )}
-            <ul className={`space-y-2 max-w-3xl ${e.summary ? "" : "mt-4"}`}>
-              {e.bullets.map((b, idx) => (
-                <li key={idx} className="text-stone-700 leading-relaxed flex gap-3">
-                  <span className="text-stone-300 select-none mt-1.5">—</span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   EDUCATION & RESEARCH
-   ────────────────────────────────────────────────────────────────────────── */
-
-function EducationAndResearch() {
-  return (
-    <section className="py-8 sm:py-10">
-      <SectionMarker index="03" label="Education & Research" />
-      <div className="grid md:grid-cols-2 gap-10">
-        <div>
-          <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-2">
-            2020 — 2024
-          </div>
-          <h3 className="text-xl sm:text-2xl text-stone-900 font-medium tracking-tight">
-            Bachelor of Engineering (S1), Informatics Engineering
-          </h3>
-          <div className="text-stone-600 mt-1">
-            UIN Sunan Gunung Djati Bandung
-          </div>
-          <div className="text-stone-500 mt-3 font-mono text-sm">
-            GPA 3.6 / 4.0
-          </div>
-          <div className="mt-6">
-            <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-2">
-              Certifications
-            </div>
-            <ul className="text-stone-600 text-sm space-y-1">
-              <li>Microsoft Certified Educator — Training (2022)</li>
-              <li>Oracle Academy — Java Programming (2019)</li>
-            </ul>
-          </div>
-        </div>
-
-        <div>
-          <div className="font-mono text-xs uppercase tracking-widest text-stone-500 mb-2">
-            Publication · SISFOKOM Journal (SINTA 3)
-          </div>
-          <a
-            href="https://doi.org/10.32736/sisfokom.v13i3.2214"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block"
-          >
-            <h3 className="text-xl sm:text-2xl text-stone-900 font-medium tracking-tight group-hover:underline decoration-stone-400 underline-offset-4 leading-snug">
-              Game and Application Purchasing Patterns on Steam using the
-              K-Means Algorithm
-              <ExternalLink size={16} className="inline-block ml-2 mb-1 text-stone-400 group-hover:text-stone-700 transition" />
-            </h3>
-          </a>
-          <div className="text-stone-500 mt-3 font-mono text-xs break-all">
-            doi.org/10.32736/sisfokom.v13i3.2214
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   PROJECTS
-   ────────────────────────────────────────────────────────────────────────── */
-
-function ProjectCard({ project, onOpen }) {
-  return (
-    <button
-      onClick={() => onOpen(project.id)}
-      className="group text-left bg-white border border-stone-200 rounded-2xl p-6 sm:p-7 transition-all duration-200 hover:border-blue-400 hover:shadow-[0_10px_40px_-15px_rgba(59,130,246,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 flex flex-col h-full"
-    >
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="font-mono text-xs uppercase tracking-widest text-stone-400">
-            {project.kind}
-          </div>
-          {project.wip && (
-            <span
-              className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border"
-              style={{ borderColor: accent, color: accent }}
-            >
-              In dev
-            </span>
-          )}
-        </div>
-        <ArrowUpRight
-          size={18}
-          className="text-stone-300 group-hover:text-blue-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform shrink-0"
-        />
-      </div>
-      <h3 className="text-2xl sm:text-3xl text-stone-900 font-medium tracking-tight mb-3">
-        {project.name}
-      </h3>
-      <p className="text-stone-600 leading-relaxed mb-6 flex-1">{project.summary}</p>
-      <div className="flex flex-wrap gap-2 pt-4 border-t border-stone-100">
-        {project.topTags.map((t) => (
-          <Chip key={t}>{t}</Chip>
-        ))}
-        <span className="ml-auto font-mono text-xs text-stone-400 self-center">
-          {project.wip ? "View case study →" : "View demo →"}
-        </span>
-      </div>
-    </button>
-  );
-}
-
-function Projects({ onOpen }) {
-  return (
-    <section id="projects" className="py-8 sm:py-12 scroll-mt-8">
-      <SectionMarker index="04" label="Selected Projects" />
-      <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
-        <h2 className="text-3xl sm:text-4xl text-stone-900 tracking-tight font-medium max-w-xl">
-          Each card opens an interactive demo of the real product — or, for
-          work in progress, a case study.
-        </h2>
-        <div className="font-mono text-xs text-stone-500">
-          {PROJECTS.length} projects · click any card
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {PROJECTS.map((p) => (
-          <ProjectCard key={p.id} project={p} onOpen={onOpen} />
-        ))}
-      </div>
-    </section>
-  );
-}
 
 /* ──────────────────────────────────────────────────────────────────────────
    MODAL
    ────────────────────────────────────────────────────────────────────────── */
 
-function Modal({ open, onClose, project, children }) {
+function Modal({ open, onClose, project, morph, children }) {
   const dialogRef = useRef(null);
   const closeBtnRef = useRef(null);
 
@@ -582,7 +290,7 @@ function Modal({ open, onClose, project, children }) {
       // Focus trap
       if (e.key === "Tab" && dialogRef.current) {
         const focusables = dialogRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button, [href], input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])'
         );
         if (focusables.length === 0) return;
         const first = focusables[0];
@@ -597,12 +305,24 @@ function Modal({ open, onClose, project, children }) {
       }
     };
     document.addEventListener("keydown", onKey);
+    // Keys pressed inside an embedded illustration never reach this document: the frame posts its
+    // Escape here once nothing is playing in it (portfolio-illustrations README).
+    const onMessage = (e) => {
+      if (e.origin !== window.location.origin || !e.data) return;
+      if (e.data.source === "ai-worker-illustration" && e.data.action === "escape") onClose();
+    };
+    window.addEventListener("message", onMessage);
+    // The page behind takes no focus while the dialog is open, so Tab leaving a frame stays here.
+    const behind = [...document.querySelectorAll("header.nav, main, footer.closing")];
+    behind.forEach((el) => { el.inert = true; });
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     // focus close btn after small delay
     requestAnimationFrame(() => closeBtnRef.current?.focus());
     return () => {
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("message", onMessage);
+      behind.forEach((el) => { el.inert = false; });
       document.body.style.overflow = prevOverflow;
     };
   }, [open, onClose]);
@@ -611,7 +331,7 @@ function Modal({ open, onClose, project, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 ${morph ? "" : "animate-fade-in"}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -624,8 +344,20 @@ function Modal({ open, onClose, project, children }) {
       <div
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        className="modal-enter relative bg-stone-50 w-full sm:max-w-4xl sm:rounded-3xl rounded-t-3xl border border-stone-200 shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden"
+        className={`modal-dialog ${morph ? "" : "modal-enter"} relative bg-stone-50 w-full sm:max-w-4xl sm:rounded-3xl rounded-t-3xl border border-stone-200 shadow-2xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto overscroll-contain`}
       >
+        {/* One scroll for the whole dialog (header and body together), on a phone and a desktop alike.
+            The close button stays in the corner while it scrolls. */}
+        <div className="sticky top-0 z-10 h-0">
+          <button
+            ref={closeBtnRef}
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="absolute right-6 top-6 sm:right-8 sm:top-8 w-10 h-10 rounded-full bg-stone-100 border border-stone-200 hover:bg-blue-500 hover:border-blue-500 hover:text-white text-stone-700 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <X size={18} />
+          </button>
+        </div>
         {/* Header */}
         <div className="p-6 sm:p-8 border-b border-stone-200 bg-white">
           <div className="flex items-start justify-between gap-4">
@@ -646,14 +378,7 @@ function Modal({ open, onClose, project, children }) {
                 </div>
               )}
             </div>
-            <button
-              ref={closeBtnRef}
-              onClick={onClose}
-              aria-label="Close dialog"
-              className="shrink-0 w-10 h-10 rounded-full bg-stone-100 hover:bg-blue-500 hover:text-white text-stone-700 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <X size={18} />
-            </button>
+            <span className="shrink-0 w-10 h-10" aria-hidden />
           </div>
           <div className="mt-5 flex flex-wrap gap-1.5">
             {project.stack.map((t) => (
@@ -663,7 +388,7 @@ function Modal({ open, onClose, project, children }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div>{children}</div>
       </div>
     </div>
   );
@@ -818,7 +543,7 @@ function PosDemo() {
       {/* Top bar with view toggle */}
       <div className="px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between gap-3 flex-wrap border-b border-stone-200 bg-stone-50/60">
         <div className="font-mono text-[11px] uppercase tracking-widest text-stone-500">
-          POS Bakso · interactive demo
+          POS Bakso · interactive illustration
         </div>
         <div
           role="tablist"
@@ -866,7 +591,7 @@ function PosDemo() {
 
       {/* Caption */}
       <p className="px-5 sm:px-6 pb-5 pt-3 text-[11px] italic text-stone-500 leading-relaxed">
-        Interactive demo of POS Bakso, my point-of-sale project: customers
+        Interactive illustration of POS Bakso, my point-of-sale project: customers
         order via table QR, and admins confirm, prepare, complete, and settle
         payment. Built with React, NestJS, TypeScript, Supabase, Tailwind, and
         shadcn/ui; tested with Vitest and Playwright.
@@ -1233,7 +958,7 @@ function AdminDashboard({ orders, setAdminTab }) {
             Dashboard
           </h3>
           <div className="font-mono text-[11px] text-stone-500">
-            Today · live demo data
+            Today · sample data
           </div>
         </div>
       </div>
@@ -1806,19 +1531,19 @@ const Th = ({ children, className = "" }) => (
 );
 
 /* ──────────────────────────────────────────────────────────────────────────
-   DEMO 3 — AI DETECTION (parcel-delivery verification pipeline)
+   DEMO 3 — AI DETECTION (photo-verification pipeline, shown on a generic object)
    ────────────────────────────────────────────────────────────────────────── */
 
 // Fictional sample record for verification.
-const PARCEL_EXPECTED = {
-  trackingNumber: "TRK-8842-1097",
-  packageFormat: "Standard Box — M",
+const SAMPLE_EXPECTED = {
+  referenceId: "REF-8842-1097",
+  category: "Category B — Medium",
 };
 
-// Bounding boxes on the illustrated parcel.
-const PARCEL_BOXES = [
-  { id: "pkg", label: "Package", conf: 0.94, x: 12, y: 22, w: 76, h: 64 },
-  { id: "lbl", label: "Shipping label", conf: 0.91, x: 22, y: 32, w: 44, h: 30 },
+// Bounding boxes on the illustrated object (percentages of the 5:4 frame, matching the drawing).
+const SAMPLE_BOXES = [
+  { id: "obj", label: "Object", conf: 0.94, x: 17, y: 22, w: 66, h: 71 },
+  { id: "lbl", label: "Label", conf: 0.91, x: 27, y: 53, w: 34, h: 25 },
 ];
 
 const PIPELINE_STAGES = [
@@ -1872,22 +1597,22 @@ function AiDetectionDemo() {
   // All-pass result for this demo (fields match expected). We still visually
   // demonstrate a "needs review" state for the handwritten note tone.
   const extracted = {
-    trackingNumber: { value: "TRK-8842-1097", source: "OCR", conf: 0.95 },
-    packageFormat: { value: "Standard Box — M", source: "OCR", conf: 0.92 },
-    handwrittenNote: { value: "Fragile", source: "TrOCR", conf: 0.88 },
+    referenceId: { value: "REF-8842-1097", source: "OCR", conf: 0.95 },
+    category: { value: "Category B — Medium", source: "OCR", conf: 0.92 },
+    handwrittenNote: { value: "Checked", source: "TrOCR", conf: 0.88 },
   };
   const checks = [
     {
-      field: "Tracking Number",
-      extracted: extracted.trackingNumber.value,
-      expected: PARCEL_EXPECTED.trackingNumber,
-      ok: extracted.trackingNumber.value === PARCEL_EXPECTED.trackingNumber,
+      field: "Reference ID",
+      extracted: extracted.referenceId.value,
+      expected: SAMPLE_EXPECTED.referenceId,
+      ok: extracted.referenceId.value === SAMPLE_EXPECTED.referenceId,
     },
     {
-      field: "Package Format",
-      extracted: extracted.packageFormat.value,
-      expected: PARCEL_EXPECTED.packageFormat,
-      ok: extracted.packageFormat.value === PARCEL_EXPECTED.packageFormat,
+      field: "Category",
+      extracted: extracted.category.value,
+      expected: SAMPLE_EXPECTED.category,
+      ok: extracted.category.value === SAMPLE_EXPECTED.category,
     },
     {
       field: "Handwritten Note",
@@ -1971,10 +1696,10 @@ function AiDetectionDemo() {
       </ol>
 
       <div className="grid lg:grid-cols-5 gap-5">
-        {/* Illustrated parcel */}
+        {/* Illustrated object */}
         <div className="lg:col-span-3">
           <div className="relative aspect-[5/4] rounded-xl overflow-hidden border border-stone-300 bg-stone-100">
-            <ParcelIllustration />
+            <ObjectIllustration />
 
             {/* Scan sweep on first stage */}
             {stage === 0 && (
@@ -1989,7 +1714,7 @@ function AiDetectionDemo() {
 
             {/* Bounding boxes */}
             {showBoxes &&
-              PARCEL_BOXES.map((b, i) => (
+              SAMPLE_BOXES.map((b, i) => (
                 <div
                   key={b.id}
                   className="absolute transition-all duration-500"
@@ -2028,17 +1753,17 @@ function AiDetectionDemo() {
             ) : (
               <ul className="space-y-2">
                 <ExtractedRow
-                  label="Tracking Number"
-                  value={extracted.trackingNumber.value}
+                  label="Reference ID"
+                  value={extracted.referenceId.value}
                   source="OCR"
-                  conf={extracted.trackingNumber.conf}
+                  conf={extracted.referenceId.conf}
                   delay={0}
                 />
                 <ExtractedRow
-                  label="Package Format"
-                  value={extracted.packageFormat.value}
+                  label="Category"
+                  value={extracted.category.value}
                   source="OCR"
-                  conf={extracted.packageFormat.conf}
+                  conf={extracted.category.conf}
                   delay={100}
                 />
                 <ExtractedRow
@@ -2112,8 +1837,8 @@ function AiDetectionDemo() {
                   </span>
                 </div>
                 <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 space-y-1 font-mono text-[11px]">
-                  <SummaryRow k="Tracking" v={extracted.trackingNumber.value} />
-                  <SummaryRow k="Format" v={extracted.packageFormat.value} />
+                  <SummaryRow k="Reference" v={extracted.referenceId.value} />
+                  <SummaryRow k="Category" v={extracted.category.value} />
                   <SummaryRow k="Note" v={extracted.handwrittenNote.value} italic />
                 </div>
               </div>
@@ -2125,8 +1850,8 @@ function AiDetectionDemo() {
       {/* NDA-safety caption */}
       <p className="mt-5 text-[11px] italic text-stone-500 leading-relaxed max-w-3xl">
         Interactive illustration of a computer-vision pipeline I built (object
-        detection + OCR/TrOCR + automated validation). Demo uses fictional
-        parcel-delivery data; the production system and its data are
+        detection + OCR/TrOCR + automated validation). It is shown on a generic
+        object with fictional data; the production system and its data are
         confidential.
       </p>
     </div>
@@ -2189,8 +1914,9 @@ function SummaryRow({ k, v, italic }) {
   );
 }
 
-// Pure CSS/SVG parcel illustration — no photo, no logos.
-function ParcelIllustration() {
+// Pure SVG illustration of a generic object with a printed label: no photo, no logos, and nothing
+// that names what the real system looks at.
+function ObjectIllustration() {
   return (
     <div
       className="absolute inset-0"
@@ -2206,263 +1932,163 @@ function ParcelIllustration() {
         aria-hidden
       >
         {/* Drop shadow */}
-        <ellipse cx="100" cy="140" rx="68" ry="6" fill="rgba(0,0,0,0.12)" />
-        {/* Box body (front face) */}
+        <ellipse cx="100" cy="142" rx="66" ry="5" fill="rgba(0,0,0,0.10)" />
+        {/* Body */}
         <path
           d="M40 60 L100 40 L160 60 L160 124 L100 144 L40 124 Z"
-          fill="#C9B496"
-          stroke="#8C7656"
+          fill="#CFD3D8"
+          stroke="#6B7280"
           strokeWidth="1"
           strokeLinejoin="round"
         />
-        {/* Box top */}
+        {/* Top face */}
         <path
           d="M40 60 L100 40 L160 60 L100 80 Z"
-          fill="#D7C19F"
-          stroke="#8C7656"
+          fill="#E5E7EB"
+          stroke="#6B7280"
           strokeWidth="1"
           strokeLinejoin="round"
         />
-        {/* Box side shading */}
-        <path
-          d="M100 80 L160 60 L160 124 L100 144 Z"
-          fill="#B9A483"
-          opacity="0.6"
-        />
-        {/* Tape seam */}
-        <path d="M40 60 L100 80 L160 60" stroke="#8C7656" strokeWidth="1.2" fill="none" />
-        <path d="M100 80 L100 144" stroke="#8C7656" strokeWidth="1.2" fill="none" />
-        <rect
-          x="74"
-          y="62"
-          width="52"
-          height="6"
-          fill="#E6D9BD"
-          stroke="#8C7656"
-          strokeWidth="0.6"
-          transform="skewY(-18) translate(0,18)"
-        />
-        {/* Shipping label */}
+        {/* Side face in shade */}
+        <path d="M100 80 L160 60 L160 124 L100 144 Z" fill="#9CA3AF" opacity="0.55" />
+        <path d="M100 80 L100 144" stroke="#6B7280" strokeWidth="1" fill="none" />
+        {/* Printed label */}
         <g transform="translate(58 88)">
-          <rect width="60" height="34" fill="#FAFAF7" stroke="#8C7656" strokeWidth="0.8" rx="1" />
+          <rect width="60" height="34" fill="#FAFAF7" stroke="#6B7280" strokeWidth="0.8" rx="2" />
           {/* Printed lines (mock) */}
-          <rect x="4" y="4" width="38" height="2.5" fill="#1F1B16" />
-          <rect x="4" y="9" width="28" height="1.6" fill="#6B6155" />
-          <rect x="4" y="13" width="32" height="1.6" fill="#6B6155" />
-          {/* Mock barcode */}
-          <g transform="translate(4 18)">
-            {Array.from({ length: 22 }).map((_, i) => (
-              <rect
-                key={i}
-                x={i * 2.2}
-                y="0"
-                width={i % 3 === 0 ? 0.9 : 1.6}
-                height="10"
-                fill="#1F1B16"
-              />
+          <rect x="4" y="4" width="30" height="2.6" fill="#1F2937" />
+          <rect x="4" y="10" width="24" height="1.6" fill="#6B7280" />
+          <rect x="4" y="14" width="34" height="1.6" fill="#6B7280" />
+          {/* Reference code: a row of printed characters */}
+          <g transform="translate(4 21)">
+            {Array.from({ length: 11 }).map((_, i) => (
+              <rect key={i} x={i * 4.6} y="0" width={i === 3 || i === 7 ? 1.6 : 3.4} height={i === 3 || i === 7 ? 1.2 : 5.5} transform={i === 3 || i === 7 ? "translate(0.9 2.2)" : undefined} fill="#1F2937" />
             ))}
           </g>
-          {/* Handwritten "Fragile" — squiggle */}
-          <path
-            d="M 46 7 q 2 -3 4 0 t 4 0 t 4 0"
-            fill="none"
-            stroke="#9C2A2A"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 46 11 q 2 -2 4 0 t 4 0 t 4 0"
-            fill="none"
-            stroke="#9C2A2A"
-            strokeWidth="1.1"
-            strokeLinecap="round"
-          />
+          {/* Handwritten note: two pen strokes */}
+          <path d="M 41 6 q 2 -3 4 0 t 4 0 t 4 0" fill="none" stroke="#1E3A8A" strokeWidth="1.1" strokeLinecap="round" />
+          <path d="M 41 10.5 q 2 -2 4 0 t 4 0 t 4 0" fill="none" stroke="#1E3A8A" strokeWidth="1.1" strokeLinecap="round" />
         </g>
-        {/* Corner edge highlights */}
-        <path d="M40 60 L40 124" stroke="#A38C6B" strokeWidth="0.8" />
-        <path d="M160 60 L160 124" stroke="#A38C6B" strokeWidth="0.8" />
+        {/* Edge highlights */}
+        <path d="M40 60 L40 124" stroke="#9CA3AF" strokeWidth="0.8" />
+        <path d="M160 60 L160 124" stroke="#9CA3AF" strokeWidth="0.8" />
       </svg>
     </div>
   );
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   CASE STUDY — AI WORKER (agentic AI, in development)
+   CASE STUDY — AI WORKER (local prototype)
+   Two interactive illustrations, kept as self-contained pages in
+   public/portfolio-illustrations (copied from the project's own
+   portfolio-illustrations/standalone folder) and shown one at a time.
    ────────────────────────────────────────────────────────────────────────── */
 
-const AGENT_LOOP = [
-  { id: "understand", label: "Understand", note: "Read the request and the business context" },
-  { id: "plan", label: "Plan", note: "Decide what actually needs to happen" },
-  { id: "retrieve", label: "Retrieve", note: "Pull the facts before answering" },
-  { id: "reason", label: "Reason", note: "Work out the decision" },
-  { id: "act", label: "Act", note: "Call a tool — book, schedule, update, notify" },
-  { id: "check", label: "Check", note: "Verify the action actually landed" },
-  { id: "respond", label: "Respond", note: "Report back what was done" },
-];
-
-const ACTION_LEVELS = [
-  { tier: "T0", label: "Read-only", ex: "Answer a question, look up a booking", warn: false },
-  { tier: "T1", label: "Reversible write", ex: "Draft a reply, place a tentative hold", warn: false },
-  { tier: "T2", label: "Confirmed action", ex: "Confirm a booking, message a customer", warn: false },
-  { tier: "T3", label: "Human handoff", ex: "Complaints, refunds, high-value decisions", warn: true },
+const AI_WORKER_VIEWS = [
+  {
+    id: "flow",
+    label: "Application flow",
+    title: "AI Worker application walkthrough",
+    src: "/portfolio-illustrations/application-flow.html?embed=1",
+    height: 1020,
+    line: "Three journeys: a question answered from evidence, a reply held for staff approval, and a booking confirmed after a person verifies the deposit.",
+  },
+  {
+    id: "stack",
+    label: "Technology",
+    title: "AI Worker technology architecture",
+    src: "/portfolio-illustrations/tech-stack.html?embed=1",
+    height: 1140,
+    line: "Eight parts in three layers. Select one to see what it does and why it is there.",
+  },
 ];
 
 function AiWorkerCaseStudy() {
+  const [viewId, setViewId] = useState("flow");
+  const view = AI_WORKER_VIEWS.find((v) => v.id === viewId);
+  const [height, setHeight] = useState(view.height); // each view's usual height, until it is measured
+  const frameRef = useRef(null);
+
+  // The page in the frame is served from this site, so the frame takes its content's height and is
+  // told never to scroll by itself: the dialog's scroll is the only one.
+  const fitFrame = useCallback(() => {
+    const frame = frameRef.current;
+    const doc = frame && frame.contentDocument;
+    const app = doc && doc.getElementById("app");
+    if (!app) return undefined;
+    const win = frame.contentWindow;
+    doc.documentElement.style.overflow = "hidden";
+    // The diagram is drawn at 940x600 and scaled down to the frame's width. Its unscaled height
+    // still counts as content, which left a strip of empty scroll inside the diagram: a second
+    // scroll under the pointer. A negative margin takes that strip away; zoomed in, it is not set.
+    const stage = doc.querySelector(".stage");
+    const trim = () => {
+      if (!stage) return;
+      const scale = new win.DOMMatrixReadOnly(win.getComputedStyle(stage).transform).a;
+      const want = scale < 1 ? `${Math.floor(stage.offsetHeight * (scale - 1))}px` : "";
+      if (stage.style.marginBottom !== want) stage.style.marginBottom = want;
+    };
+    const measure = () => { trim(); setHeight(Math.ceil(app.getBoundingClientRect().height) + 2); };
+    measure();
+    const observer = new win.ResizeObserver(measure);
+    observer.observe(app);
+    const styled = stage ? new win.MutationObserver(trim) : null;
+    if (styled) styled.observe(stage, { attributes: true, attributeFilter: ["style"] });
+    return () => { observer.disconnect(); if (styled) styled.disconnect(); };
+  }, []);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return undefined;
+    let stop;
+    const onLoad = () => { if (stop) stop(); stop = fitFrame(); };
+    frame.addEventListener("load", onLoad);
+    if (frame.contentDocument && frame.contentDocument.readyState === "complete") onLoad();
+    return () => { frame.removeEventListener("load", onLoad); if (stop) stop(); };
+  }, [viewId, fitFrame]);
+
   return (
-    <div className="p-5 sm:p-6 space-y-7">
-      {/* Thesis */}
-      <div>
-        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-2">
-          The idea
-        </div>
-        <p className="text-stone-700 leading-relaxed max-w-2xl">
-          Most &ldquo;AI for business&rdquo; is a chatbot: a question goes in, an
-          answer comes out. An AI Worker owns the whole task — it understands the
-          situation, decides what needs to happen, does it, checks it, and reports
-          back.
-        </p>
-      </div>
+    <div className="p-5 sm:p-6 space-y-5">
+      <p className="text-stone-700 leading-relaxed max-w-2xl">
+        The model proposes; application rules decide whether it may answer on its
+        own, needs staff approval, or must hand off to a person.
+      </p>
 
-      {/* Chatbot vs AI Worker */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div className="bg-white border border-stone-200 rounded-xl p-4">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-400 mb-2">
-            Chatbot
-          </div>
-          <div className="font-mono text-xs text-stone-500">
-            Customer → Bot → Answer
-          </div>
-        </div>
-        <div className="bg-white border rounded-xl p-4" style={{ borderColor: accent }}>
-          <div
-            className="font-mono text-[10px] uppercase tracking-widest mb-2"
-            style={{ color: accent }}
-          >
-            AI Worker
-          </div>
-          <div className="font-mono text-[11px] text-stone-700 leading-relaxed">
-            Customer → Understand → Plan → Retrieve → Reason → Act → Check →
-            Respond
-          </div>
-        </div>
-      </div>
-
-      {/* The agent loop */}
-      <div>
-        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-3">
-          The agent loop
-        </div>
-        <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {AGENT_LOOP.map((s, i) => (
-            <li
-              key={s.id}
-              className="p-3 rounded-lg border border-stone-200 bg-white"
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="inline-flex p-1 rounded-full bg-stone-100 border border-stone-200" role="group" aria-label="Choose an illustration">
+          {AI_WORKER_VIEWS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              aria-pressed={v.id === viewId}
+              onClick={() => { setViewId(v.id); setHeight(v.height); }}
+              className={`px-4 py-2 rounded-full font-mono text-xs uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                v.id === viewId ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+              }`}
             >
-              <div className="flex items-center gap-2 mb-1.5">
-                <span
-                  className="w-5 h-5 rounded-full text-white font-mono text-[10px] flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: accentBg }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-sm text-stone-900 font-medium">
-                  {s.label}
-                </span>
-              </div>
-              <div className="text-[11px] text-stone-500 leading-snug">
-                {s.note}
-              </div>
-            </li>
+              {v.label}
+            </button>
           ))}
-        </ol>
-      </div>
-
-      {/* Action levels */}
-      <div>
-        <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500 mb-3">
-          Bounded autonomy · action levels
         </div>
-        <ul className="space-y-1.5">
-          {ACTION_LEVELS.map((a) => (
-            <li
-              key={a.tier}
-              className="flex items-start gap-3 text-xs bg-white border border-stone-200 rounded-lg px-3 py-2"
-            >
-              <span
-                className="font-mono text-[10px] px-1.5 py-0.5 rounded shrink-0 text-white"
-                style={{ backgroundColor: a.warn ? "#b45309" : accentBg }}
-              >
-                {a.tier}
-              </span>
-              <div>
-                <span className="text-stone-800 font-medium">{a.label}</span>
-                <span className="text-stone-500"> — {a.ex}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm text-stone-600 flex-1" style={{ minWidth: "16rem" }}>{view.line}</p>
       </div>
 
-      {/* Target + scope */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Panel title="First market">
-          <p className="text-xs text-stone-600 leading-relaxed">
-            Indonesian Haji &amp; Umrah travel agencies — lead follow-up, booking,
-            scheduling, complaint handling, and operational coordination, not just
-            answering questions.
-          </p>
-        </Panel>
-        <Panel title="What this project covers">
-          <p className="text-xs text-stone-600 leading-relaxed">
-            Market and competitor research, product spec, UX, system and AI
-            architecture, database and API design — business through engineering.
-          </p>
-        </Panel>
-      </div>
+      <iframe
+        key={view.id}
+        ref={frameRef}
+        src={view.src}
+        title={view.title}
+        scrolling="no"
+        className="block w-full rounded-2xl"
+        style={{ height, border: 0, background: "transparent" }}
+      />
 
       <p className="text-[11px] italic text-stone-500 leading-relaxed max-w-3xl">
-        In active development. This is a concept and architecture case study — the
-        system is not yet shipped and has no customers.
+        Sample messages, not live customer data. No messages are sent and no payments
+        are processed. Built from the project implementation; production hosting is
+        not verified.
       </p>
     </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   FOOTER
-   ────────────────────────────────────────────────────────────────────────── */
-
-function Footer() {
-  return (
-    <footer className="py-10 sm:py-14 border-t border-stone-200 mt-6">
-      <SectionMarker index="05" label="Contact" />
-      <div className="grid md:grid-cols-2 gap-10 items-end">
-        <div>
-          <h2 className="text-3xl sm:text-5xl text-stone-900 tracking-tight font-medium leading-tight">
-            Let's build something.
-          </h2>
-          <p className="mt-4 text-stone-600 max-w-md leading-relaxed">
-            Open to full-time, part-time, contract, and remote roles in AI
-            engineering, full-stack, and computer vision — happy to chat about
-            interesting problems.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button as="a" href={`mailto:${IDENTITY.email}`}>
-              <Mail size={15} />
-              {IDENTITY.email}
-            </Button>
-            <Button as="a" href={IDENTITY.linkedinUrl} target="_blank" rel="noopener noreferrer" variant="ghost">
-              <Linkedin size={15} />
-              LinkedIn
-            </Button>
-          </div>
-        </div>
-        <div className="font-mono text-xs text-stone-500 space-y-2 md:text-right">
-          <div>© {new Date().getFullYear()} {IDENTITY.name}</div>
-          <div>Built with React, Tailwind, and care.</div>
-        </div>
-      </div>
-    </footer>
   );
 }
 
@@ -2470,110 +2096,102 @@ function Footer() {
    APP
    ────────────────────────────────────────────────────────────────────────── */
 
-export default function Portfolio() {
-  const [openId, setOpenId] = useState(null);
-  const [activeSection, setActiveSection] = useState('');
-  const projectsRef = useRef(null);
-
-  useEffect(() => {
-    const ids = ['work', 'projects', 'contact'];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); });
-      },
-      { rootMargin: '-20% 0px -60% 0px' }
-    );
-    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
-    return () => observer.disconnect();
-  }, []);
-
-  const open = (id) => setOpenId(id);
-  const close = () => setOpenId(null);
-  const project = PROJECTS.find((p) => p.id === openId);
-
-  const scrollToProjects = () => {
-    const el = document.getElementById("projects");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 antialiased selection:bg-stone-900 selection:text-stone-50">
-      <a
-        href="#top"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:border focus:border-blue-700 focus:rounded-full focus:text-sm focus:font-medium focus:ring-2 focus:ring-blue-700"
-      >
-        Skip to main content
-      </a>
-      {/* Inline keyframes (Tailwind core only) */}
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-        .animate-fade-in { animation: fadeIn .25s ease-out both; }
-        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
-        @keyframes pulseBox { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
-        @keyframes heroShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 70% 50%; } }
-        .hero-gradient {
-          color: #4F8BE4; /* fallback */
-          background-image: linear-gradient(110deg, #4F8BE4 0%, #7DB3F5 60%, #4F8BE4 100%);
-          background-size: 200% 100%;
-          background-position: 0% 50%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: heroShift 7s ease-in-out infinite;
-        }
-        @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
-          .hero-gradient { color: #4F8BE4; -webkit-text-fill-color: currentColor; background-image: none; }
-        }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: none; } }
-        .modal-enter { animation: modalIn 0.2s ease-out both; }
-        html { scroll-behavior: smooth; }
-        @media (prefers-reduced-motion: reduce) {
-          .hero-gradient { animation: none; background-position: 0% 50%; }
-          .animate-fade-in { animation: none; opacity: 1; }
-          .modal-enter { animation: none; }
-        }
-      `}</style>
-
-      {/* top nav */}
-      <nav className="sticky top-0 z-30 bg-stone-50/80 backdrop-blur border-b border-stone-200/60">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
-          <a href="#top" className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-stone-900">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
-            salmanfazz
-          </a>
-          <div className="hidden sm:flex items-center gap-7 font-mono text-xs uppercase tracking-widest text-stone-500">
-            <a href="#projects" className={`hover:text-blue-600 transition ${activeSection === 'projects' ? 'text-blue-600 font-medium' : ''}`}>Projects</a>
-            <a href="#work" className={`hover:text-blue-600 transition ${activeSection === 'work' ? 'text-blue-600 font-medium' : ''}`}>Work</a>
-            <a href="#contact" className={`hover:text-blue-600 transition ${activeSection === 'contact' ? 'text-blue-600 font-medium' : ''}`}>Contact</a>
-          </div>
-          <Button as="a" href={`mailto:${IDENTITY.email}`} variant="ghost" className="!px-3 !py-2 !text-xs">
-            Get in touch
-          </Button>
-        </div>
-      </nav>
-
-      <main id="top" className="max-w-5xl mx-auto px-5 sm:px-8">
-        <Hero onViewProjects={scrollToProjects} />
-        <Skills />
-        <div id="work">
-          <Experience />
-        </div>
-        <EducationAndResearch />
-        <div ref={projectsRef}>
-          <Projects onOpen={open} />
-        </div>
-        <div id="contact">
-          <Footer />
-        </div>
-      </main>
-
-      <Modal open={!!project} onClose={close} project={project}>
-        {project?.id === "ai-worker" && <AiWorkerCaseStudy />}
-        {project?.id === "pos-bakso" && <PosDemo />}
-        {project?.id === "affiliate-reco" && <AffiliateDemo />}
-        {project?.id === "ai-detection" && <AiDetectionDemo />}
-      </Modal>
-    </div>
-  );
+// The card's picture grows into the dialog and shrinks back into it (View Transitions API; the two
+// ends share one view-transition-name, see src/index.css). It needs the picture on screen, a window
+// wide enough for the dialog to be a window (a phone gets a bottom sheet) and motion allowed;
+// otherwise the dialog fades in as before.
+const MORPH = "project-morph";
+function morphSource(panel) {
+  if (!panel || typeof document.startViewTransition !== "function") return null;
+  if (!window.matchMedia("(min-width: 640px)").matches) return null;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+  const r = panel.getBoundingClientRect();
+  const seen = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+  return seen >= r.height * 0.5 ? panel : null;
 }
 
+export default function Portfolio() {
+  // A project opens from its card, the nav or a shared link: /?project=pos-bakso
+  const [opened, setOpened] = useState(() => {
+    const id = new URLSearchParams(window.location.search).get("project");
+    return PROJECTS.some((p) => p.id === id) ? { id, morph: false } : null;
+  });
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
+  const flying = useRef(false); // a transition is running: further clicks wait for it
+
+  // Stable callbacks: the shell is memoised and must not re-render (see Shell.jsx).
+  const open = useCallback((id, event) => {
+    if (event) event.preventDefault();
+    if (flying.current) return;
+    window.history.replaceState(null, "", `?project=${id}`);
+    const card = event && event.currentTarget.closest(".card"); // a nav or footer link has no card
+    const panel = morphSource(card && card.querySelector(".panel"));
+    if (!panel) {
+      setOpened({ id, morph: false });
+      return;
+    }
+    flying.current = true;
+    panel.style.viewTransitionName = MORPH;
+    document
+      .startViewTransition(() => {
+        panel.style.viewTransitionName = "";
+        flushSync(() => setOpened({ id, morph: true }));
+      })
+      .finished.finally(() => {
+        flying.current = false;
+      });
+  }, []);
+
+  const close = useCallback(() => {
+    const current = openedRef.current;
+    if (!current || flying.current) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const panel = morphSource(document.querySelector(`#project-${current.id} > .panel`));
+    if (!panel) {
+      setOpened(null);
+      return;
+    }
+    flying.current = true;
+    document
+      .startViewTransition(() => {
+        flushSync(() => setOpened(null));
+        panel.style.viewTransitionName = MORPH;
+      })
+      .finished.finally(() => {
+        panel.style.viewTransitionName = "";
+        flying.current = false;
+      });
+  }, []);
+
+  const openId = opened ? opened.id : null;
+  const project = PROJECTS.find((p) => p.id === openId);
+
+  return (
+    <>
+      <Shell
+        identity={IDENTITY}
+        projects={PROJECTS}
+        experience={EXPERIENCE}
+        education={EDUCATION}
+        tools={STACK_TOOLS}
+        words={STACK_WORDS}
+        agentSteps={AI_WORKER_STEPS}
+        onOpen={open}
+      />
+      {project &&
+        createPortal(
+          // .tw-scope: Tailwind and its reset apply only inside the demos (src/index.css)
+          <div className="tw-scope">
+            <Modal open onClose={close} project={project} morph={opened.morph}>
+              {project.id === "ai-worker" && <AiWorkerCaseStudy />}
+              {project.id === "pos-bakso" && <PosDemo />}
+              {project.id === "affiliate-reco" && <AffiliateDemo />}
+              {project.id === "ai-detection" && <AiDetectionDemo />}
+            </Modal>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}

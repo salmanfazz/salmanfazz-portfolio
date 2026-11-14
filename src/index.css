@@ -1,15 +1,100 @@
 @tailwind base;
+
+/* The design kit names its 12-column page grid .grid, the same class as Tailwind's display: grid.
+   Inside the demos .grid is Tailwind's again. This sits before the utilities so grid-cols-*,
+   col-span-* and gap-* still win. */
+.tw-scope .grid { grid-template-columns: none; column-gap: normal; row-gap: normal; }
+.tw-scope .grid > * { grid-column: auto; min-width: auto; }
+
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+/* ──────────────────────────────────────────────────────────────────────────
+   Tailwind's reset, scoped to the project demos (.tw-scope wraps the modal).
+   The page shell takes its reset and type from public/assets/system.css.
+   ────────────────────────────────────────────────────────────────────────── */
+.tw-scope,
+.tw-scope *,
+.tw-scope ::before,
+.tw-scope ::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e7e5e4;
+}
+.tw-scope {
+  font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: #1c1917;
+  -webkit-font-smoothing: antialiased;
+}
+.tw-scope h1, .tw-scope h2, .tw-scope h3, .tw-scope h4, .tw-scope h5, .tw-scope h6 {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  hyphens: manual;
+  text-wrap: wrap;
+}
+.tw-scope p, .tw-scope blockquote, .tw-scope dl, .tw-scope dd, .tw-scope figure, .tw-scope pre, .tw-scope hr { margin: 0; }
+.tw-scope ol, .tw-scope ul, .tw-scope menu { list-style: none; margin: 0; padding: 0; }
+.tw-scope a { color: inherit; text-decoration: inherit; }
+.tw-scope b, .tw-scope strong { font-weight: bolder; }
+.tw-scope small { font-size: 80%; }
+.tw-scope table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+.tw-scope button, .tw-scope input, .tw-scope select, .tw-scope textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+.tw-scope button, .tw-scope select { text-transform: none; }
+.tw-scope button {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+  cursor: pointer;
+}
+.tw-scope button:disabled { cursor: default; }
+.tw-scope input::placeholder, .tw-scope textarea::placeholder { opacity: 1; color: #a8a29e; }
+.tw-scope textarea { resize: vertical; }
+.tw-scope img, .tw-scope svg, .tw-scope video, .tw-scope canvas { display: block; vertical-align: middle; }
+.tw-scope img, .tw-scope video { max-width: 100%; height: auto; }
+.tw-scope [hidden] { display: none; }
+.tw-scope .font-mono, .tw-scope code, .tw-scope kbd, .tw-scope samp, .tw-scope pre {
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
-.font-mono, [class*="font-mono"] {
-  font-family: 'JetBrains Mono', ui-monospace, "SFMono-Regular", Menlo, monospace;
-}
+/* motion inside the demos */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.animate-fade-in { animation: fadeIn .25s ease-out both; }
+@keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+@keyframes pulseBox { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
+/* A card's picture grows into the dialog and back (App.jsx starts the view transition and gives the
+   picture this same name for its length). 420ms on the page's enter curve, no overshoot. */
+.modal-dialog { view-transition-name: project-morph; }
+::view-transition-group(project-morph) { animation-duration: .42s; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+::view-transition-old(project-morph),
+::view-transition-new(project-morph) { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+/* the box travels for the whole 420ms and is never see-through: the new face is solid from the first
+   frame, and the old one lies over it and is gone by 200ms, so the picture is not read stretched */
+@keyframes morphOut { to { opacity: 0; } }
+::view-transition-old(project-morph) { z-index: 1; mix-blend-mode: normal; animation: morphOut .2s linear both; }
+::view-transition-new(project-morph) { mix-blend-mode: normal; animation: none; }
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: .3s; }
 
-body {
-  background: #FAFAF7;
+@keyframes modalIn { from { opacity: 0; transform: scale(0.98) translateY(8px); } to { opacity: 1; transform: none; } }
+.modal-enter { animation: modalIn .24s cubic-bezier(.22, 1, .36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in { animation: none; opacity: 1; }
+  .modal-enter { animation: none; }
 }
