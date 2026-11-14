@@ -77,8 +77,6 @@
          one or two screens; that was dropped on request, because filling the screens left large gaps.) The
          kit's own paddings stay, so neighbouring sections stand one distance apart all the way down. */
       main > :is(section, .section):not(.hero), footer.closing { height: auto; min-height: 0; }
-      /* a section reached from an in-page link takes the keyboard's place (src/main.jsx) and draws no ring round itself */
-      main:focus, main > section:focus, footer.closing:focus { outline: none; }
       /* one panel height per card group */
       #projects .panel { --p-h: 440px; }
       #projects .grid { row-gap: var(--s-8); }
