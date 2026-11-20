@@ -207,9 +207,9 @@ const productsHtml = `
 const STAGE_TICK = '<span class="ui-pipe__ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span>';
 const STAGES = [
   ["detect", "Object detection", "YOLOv10m", "1s"],
-  ["extract", "Text extraction", "OCR, TrOCR", "2s"],
-  ["verify", "Verification", "expected data", "1s"],
-  ["result", "Result", "form auto-fill", "1s"],
+  ["extract", "Text reading", "RapidOCR, TrOCR", "2s"],
+  ["verify", "Work-order check", "expected data", "1s"],
+  ["result", "Suggestion", "reviewer decides", "1s"],
 ];
 const detectionHtml = `
 <div class="ui ui-panel ui-pipe" data-ui="pipeline-board">
@@ -218,11 +218,11 @@ const detectionHtml = `
     <span class="ui-pipe__repo">AI Detection</span><i class="ui-pipe__slash">/</i><code class="ui-pipe__ref">pipeline</code>
     <span class="ui-spacer"></span>
     <span class="ui-pipe__total"><svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8.5" r="5.5"/><path d="M8 5.5v3l2 1.25M6.5 1.75h3"/></svg><span data-pipe-total>5s</span></span>
-    <span class="ui-chip ui-chip--ink ui-chip--live ui-pipe__chip" data-pipe-chip data-done="Valid">Running</span>
+    <span class="ui-chip ui-chip--ink ui-chip--live ui-pipe__chip" data-pipe-chip data-done="Suggested">Running</span>
   </div>
   <div class="ui-pipe__commit">
     <span class="ui-avatar" data-tone="4"><svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5h2.2l1-1.5h4.6l1 1.5h2.2v7.5h-11z"/><circle cx="8" cy="8.6" r="2.2"/></svg></span>
-    <span class="ui-pipe__msg">Object photo received</span>
+    <span class="ui-pipe__msg">Field photo received</span>
     <code class="ui-pipe__sha">sample</code>
     <button class="ui-btn ui-btn--ghost ui-btn--sm ui-pipe__btn" type="button" tabindex="-1" data-pipe-btn data-done="Run again">Cancel</button>
   </div>
@@ -242,13 +242,13 @@ const detectionHtml = `
 const DETECTION_PIPELINE = JSON.stringify({
   layout: "lanes",
   ground: "none",
-  alt: "An object photo goes to the FastAPI inference service, which detects the objects, extracts the text and auto-fills the form once the result is verified.",
-  input: { label: "Object photo", icon: "ui:camera", sub: "Web client" },
-  core: { label: "FastAPI service", icon: "fastapi" },
+  alt: "A field photo goes from the review application to the FastAPI detector services, which check Equipment 1 and Equipment 2 and return suggested checks for a reviewer to decide on.",
+  input: { label: "Field photo", icon: "ui:camera", sub: "Review application" },
+  core: { label: "Detector APIs", icon: "fastapi" },
   lanes: [
-    { label: "Objects detected", icon: "ui:scan-line", done: true, sub: "YOLOv10m" },
-    { label: "Text extracted", icon: "ui:file-text", done: true, sub: "OCR, TrOCR" },
-    { label: "Form auto-filled", icon: "ui:clipboard-check", done: true, sub: "Checked first" },
+    { label: "Equipment 1 checked", icon: "ui:scan-line", done: true, sub: "YOLOv10m, OCR" },
+    { label: "Equipment 2 checked", icon: "ui:file-text", done: true, sub: "YOLO OBB, rules" },
+    { label: "Reviewer decides", icon: "ui:clipboard-check", done: true, sub: "Decision stored" },
   ],
 });
 
@@ -318,8 +318,8 @@ const PROJECT_CARDS = {
   },
   "ai-detection": {
     title: "AI Detection System verifies photos",
-    body: "YOLOv10m finds the objects, OCR and TrOCR read the text, and each result is verified against the expected data.",
-    menu: "Detection, text extraction and validation",
+    body: "Two detectors check field photos. YOLO finds the equipment, OCR reads its identifier and a reviewer decides.",
+    menu: "Detection, text reading and human review",
     tools: ["opencv", "python", "docker"],
     panel: (
       <div className="panel">

@@ -90,7 +90,9 @@ const STACK_TOOLS = [
 // technology a project or the work history names is either a logo above or a word here.
 const STACK_WORDS = [
   "OCR",
+  "RapidOCR",
   "TrOCR",
+  "YOLO OBB",
   "RAG",
   "LiteLLM",
   "OpenRouter",
@@ -192,19 +194,20 @@ const PROJECTS = [
     id: "ai-detection",
     name: "AI Detection System",
     kind: "Computer Vision Pipeline",
-    summary: "AI photo-verification pipeline — object detection, text extraction, and automated validation, illustrated with a generic object.",
+    summary: "Photo verification for field work. Two detector services find the equipment in a photo, read its identifier and check it against the work order. The AI suggests each answer and a reviewer decides.",
     topTags: ["YOLOv10m", "FastAPI", "TrOCR"],
     stack: [
       "Python",
       "YOLOv10m",
+      "YOLO OBB",
       "FastAPI",
       "OpenCV",
-      "OCR",
+      "RapidOCR",
       "TrOCR",
       "Docker",
       "Cloudflare Tunnel",
     ],
-    ndaNote: "Interactive illustration only — the live system is not demoed; all data shown is fictional.",
+    ndaNote: "Work under NDA — the walkthrough uses fictional data; the scores are from recorded validation runs.",
   },
   {
     id: "pos-bakso",
@@ -1548,15 +1551,20 @@ const SAMPLE_BOXES = [
 
 const PIPELINE_STAGES = [
   { id: "detect", label: "Object Detection", icon: ScanLine },
-  { id: "extract", label: "Text Extraction", icon: FileText },
-  { id: "verify", label: "Verification", icon: ShieldCheck },
-  { id: "result", label: "Result", icon: ClipboardCheck },
+  { id: "extract", label: "Text Reading", icon: FileText },
+  { id: "verify", label: "Work-order Check", icon: ShieldCheck },
+  { id: "result", label: "Suggestion", icon: ClipboardCheck },
 ];
+
+// The reviewer's note on a rejected suggestion (fictional, like the rest of the sample).
+const SAMPLE_REJECT_NOTE = "Identifier partly covered, retake the photo";
 
 function AiDetectionDemo() {
   // stage: -1 idle, 0..3 active stage index, 4 finished
   const [stage, setStage] = useState(-1);
   const [running, setRunning] = useState(false);
+  // The reviewer's decision on the finished suggestion: null, "approved" or "rejected"
+  const [decision, setDecision] = useState(null);
   const timers = useRef([]);
 
   const clearTimers = () => {
@@ -1570,6 +1578,7 @@ function AiDetectionDemo() {
     clearTimers();
     setStage(0);
     setRunning(true);
+    setDecision(null);
     timers.current.push(setTimeout(() => setStage(1), 1400));
     timers.current.push(setTimeout(() => setStage(2), 2900));
     timers.current.push(setTimeout(() => setStage(3), 4300));
@@ -1585,6 +1594,7 @@ function AiDetectionDemo() {
     clearTimers();
     setStage(-1);
     setRunning(false);
+    setDecision(null);
   };
 
   const isStarted = stage >= 0;
@@ -1597,8 +1607,8 @@ function AiDetectionDemo() {
   // All-pass result for this demo (fields match expected). We still visually
   // demonstrate a "needs review" state for the handwritten note tone.
   const extracted = {
-    referenceId: { value: "REF-8842-1097", source: "OCR", conf: 0.95 },
-    category: { value: "Category B — Medium", source: "OCR", conf: 0.92 },
+    referenceId: { value: "REF-8842-1097", source: "RapidOCR", conf: 0.95 },
+    category: { value: "Category B — Medium", source: "RapidOCR", conf: 0.92 },
     handwrittenNote: { value: "Checked", source: "TrOCR", conf: 0.88 },
   };
   const checks = [
@@ -1649,7 +1659,7 @@ function AiDetectionDemo() {
           )}
         </div>
         <div className="font-mono text-xs text-stone-500">
-          Pipeline · YOLO + OCR + TrOCR · fictional sample
+          Pipeline · YOLO + RapidOCR + TrOCR · fictional sample
         </div>
       </div>
 
@@ -1755,14 +1765,14 @@ function AiDetectionDemo() {
                 <ExtractedRow
                   label="Reference ID"
                   value={extracted.referenceId.value}
-                  source="OCR"
+                  source="RapidOCR"
                   conf={extracted.referenceId.conf}
                   delay={0}
                 />
                 <ExtractedRow
                   label="Category"
                   value={extracted.category.value}
-                  source="OCR"
+                  source="RapidOCR"
                   conf={extracted.category.conf}
                   delay={100}
                 />
@@ -1778,8 +1788,8 @@ function AiDetectionDemo() {
             )}
           </Panel>
 
-          {/* Verification */}
-          <Panel title="Verification">
+          {/* Work-order check */}
+          <Panel title="Work-order Check">
             {!showVerification ? (
               <EmptyLine text="pending…" />
             ) : (
@@ -1810,8 +1820,8 @@ function AiDetectionDemo() {
             )}
           </Panel>
 
-          {/* Result */}
-          <Panel title="Result">
+          {/* Suggestion */}
+          <Panel title="Suggestion">
             {!showResult ? (
               <EmptyLine text="—" />
             ) : (
@@ -1822,7 +1832,7 @@ function AiDetectionDemo() {
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-xs font-medium"
                       style={{ backgroundColor: "#15803d" }}
                     >
-                      <ShieldCheck size={12} /> Valid
+                      <ShieldCheck size={12} /> Suggested valid
                     </span>
                   ) : (
                     <span
@@ -1833,7 +1843,7 @@ function AiDetectionDemo() {
                     </span>
                   )}
                   <span className="font-mono text-[10px] text-stone-500">
-                    auto-filled summary
+                    pre-filled for the reviewer
                   </span>
                 </div>
                 <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 space-y-1 font-mono text-[11px]">
@@ -1844,15 +1854,49 @@ function AiDetectionDemo() {
               </div>
             )}
           </Panel>
+
+          {/* Reviewer decision: the person decides, and both sides are stored */}
+          <Panel title="Reviewer Decision">
+            {!finished ? (
+              <EmptyLine text={isStarted ? "waits for the suggestion…" : "—"} />
+            ) : decision === null ? (
+              <div className="animate-fade-in flex items-center gap-2">
+                <button
+                  onClick={() => setDecision("approved")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-white text-xs font-medium transition hover:opacity-90"
+                  style={{ backgroundColor: accentBg }}
+                >
+                  <Check size={12} /> Approve
+                </button>
+                <button
+                  onClick={() => setDecision("rejected")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-stone-700 text-xs border border-stone-300 hover:border-stone-900 transition"
+                >
+                  <X size={12} /> Reject
+                </button>
+              </div>
+            ) : (
+              <div className="animate-fade-in space-y-2">
+                <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 space-y-1 font-mono text-[11px]">
+                  <SummaryRow k="AI result" v="Valid · 0.95" />
+                  <SummaryRow k="Reviewer" v={decision === "approved" ? "Approved" : "Rejected"} />
+                  {decision === "rejected" && <SummaryRow k="Note" v={SAMPLE_REJECT_NOTE} italic />}
+                </div>
+                <div className="font-mono text-[10px] text-stone-500">
+                  stored as one record for evaluation and retraining
+                </div>
+              </div>
+            )}
+          </Panel>
         </div>
       </div>
 
       {/* NDA-safety caption */}
       <p className="mt-5 text-[11px] italic text-stone-500 leading-relaxed max-w-3xl">
         Interactive illustration of a computer-vision pipeline I built (object
-        detection + OCR/TrOCR + automated validation). It is shown on a generic
-        object with fictional data; the production system and its data are
-        confidential.
+        detection, RapidOCR and TrOCR text reading, a check against the work
+        order, and a reviewer's decision). It is shown on a generic object with
+        fictional data; the client system and its data are confidential.
       </p>
     </div>
   );
@@ -1978,6 +2022,191 @@ function ObjectIllustration() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   CASE STUDY — AI DETECTION
+   Three views of the same work: the walkthrough above, the architecture, and
+   the recorded results with the text-reading research. Names stay generic
+   ("Equipment 1", "Equipment 2"): the client and what it photographs are
+   confidential. The scores are real, from recorded validation runs.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const AI_DETECTION_VIEWS = [
+  {
+    id: "walkthrough",
+    label: "Walkthrough",
+    line: "One photo through the pipeline: detection, text reading, the check against the work order, a suggestion, and the reviewer's decision.",
+  },
+  {
+    id: "architecture",
+    label: "Architecture",
+    line: "Eight parts in three layers, from the technician's photo to the reviewer's decision. Select one to see what it does and why it is there.",
+  },
+  {
+    id: "results",
+    label: "Results",
+    line: "Scores from recorded validation runs, and what the text-reading research found.",
+  },
+];
+
+function AiDetectionCaseStudy() {
+  const [viewId, setViewId] = useState("walkthrough");
+  const view = AI_DETECTION_VIEWS.find((v) => v.id === viewId);
+  return (
+    <div>
+      <div className="px-5 sm:px-6 pt-5 sm:pt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="inline-flex p-1 rounded-full bg-stone-100 border border-stone-200" role="group" aria-label="Choose a view">
+          {AI_DETECTION_VIEWS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              aria-pressed={v.id === viewId}
+              onClick={() => setViewId(v.id)}
+              className={`px-4 py-2 rounded-full font-mono text-xs uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                v.id === viewId ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-stone-600 flex-1" style={{ minWidth: "16rem" }}>{view.line}</p>
+      </div>
+      {viewId === "walkthrough" && <AiDetectionDemo />}
+      {viewId === "architecture" && <AiDetectionArchitecture />}
+      {viewId === "results" && <AiDetectionResults />}
+    </div>
+  );
+}
+
+// The same eight parts as the written architecture diagram, as an illustration page of the kind
+// AI Worker uses: select a part to read what it does and why.
+function AiDetectionArchitecture() {
+  return (
+    <div className="p-5 sm:p-6">
+      <IllustrationFrame
+        src="/portfolio-illustrations/ai-detection-architecture.html?embed=1"
+        title="AI Detection System architecture"
+        height={1140}
+      />
+    </div>
+  );
+}
+
+// Validation scores as recorded by the training runs, in percent.
+const EQUIPMENT_1_SCORES = [
+  ["Variant A", "599", "93.6", "93.5", "96.5", "78.5"],
+  ["Variant B", "601", "94.0", "92.5", "96.3", "82.1"],
+];
+const EQUIPMENT_2_SCORES = [
+  ["Labelled data only", "182", "90.9", "86.9", "92.1", "70.8"],
+  ["After pseudo-labelling, promoted", "182", "89.9", "84.4", "90.9", "68.9"],
+];
+const OCR_FINDINGS = [
+  {
+    figure: "60.6% → 73.6%",
+    text: "Identifier extraction in simulation, from joining text fragments and tolerating look-alike characters.",
+  },
+  {
+    figure: "72.5% → 100%",
+    text: "True matches against the work order, with false matches unchanged at 0.67%.",
+  },
+  {
+    figure: "97%",
+    text: "False accepts from edit-distance matching. Neighbouring identifiers differ by one digit, so it was rejected.",
+  },
+  {
+    figure: "27%",
+    text: "Of printed-label photos fail because of the photo or the label itself, which no parsing fixes.",
+  },
+];
+
+// The score columns. A phone shows the three that matter most, so the table fits without a sideways scroll.
+const SCORE_COLS = [
+  { label: "Images", phone: false },
+  { label: "Precision", phone: true },
+  { label: "Recall", phone: true },
+  { label: "mAP@0.50", phone: true },
+  { label: "mAP@0.50–0.95", phone: false },
+];
+const scoreCell = (col) => `px-2.5 sm:px-4 py-2.5 text-right ${col.phone ? "" : "hidden sm:table-cell"}`;
+
+function ScoreTable({ title, rows, note }) {
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-stone-900 mb-2">{title}</h3>
+      <div className="bg-white border border-stone-200 rounded-xl overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="border-b border-stone-200 font-mono text-[10px] uppercase tracking-wider sm:tracking-widest text-stone-500">
+              <th className="px-2.5 sm:px-4 py-2.5 font-normal">Model</th>
+              {SCORE_COLS.map((col) => (
+                <th key={col.label} className={`${scoreCell(col)} font-normal`}>{col.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([model, ...cells]) => (
+              <tr key={model} className="border-b border-stone-100 last:border-0">
+                <td className="px-2.5 sm:px-4 py-2.5 text-stone-900 sm:whitespace-nowrap">{model}</td>
+                {cells.map((c, i) => (
+                  <td key={SCORE_COLS[i].label} className={`${scoreCell(SCORE_COLS[i])} font-mono text-stone-700`}>
+                    {i === 0 ? c : `${c}%`}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-xs text-stone-600 leading-relaxed max-w-3xl">{note}</p>
+    </div>
+  );
+}
+
+function AiDetectionResults() {
+  return (
+    <div className="p-5 sm:p-6 space-y-6">
+      <ScoreTable
+        title="Equipment 1, two variant models"
+        rows={EQUIPMENT_1_SCORES}
+        note="Each variant has about 6,000 labelled images, roughly 1,500 per class. These are validation scores, not a separate test score."
+      />
+      <ScoreTable
+        title="Equipment 2, one oriented-box model"
+        rows={EQUIPMENT_2_SCORES}
+        note="From 918 labelled photos. The pseudo-labelling round did not improve on the labelled-only model, and the cable is the weak class at 74.2% mAP@0.50."
+      />
+
+      <div>
+        <h3 className="text-sm font-medium text-stone-900 mb-2">Text-reading research on about 9,000 field photos</h3>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {OCR_FINDINGS.map((f) => (
+            <div key={f.figure} className="bg-white border border-stone-200 rounded-xl p-3.5">
+              <div className="font-mono text-lg text-stone-900">{f.figure}</div>
+              <div className="mt-1 text-xs text-stone-600 leading-relaxed">{f.text}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-stone-600 leading-relaxed max-w-3xl">
+          The extraction and matching changes are specified and simulated, not shipped yet. The larger
+          fix is upstream: store the identifier as structured fields, standardise the printed label,
+          and check the photo when it is taken.
+        </p>
+      </div>
+
+      <div className="bg-white border border-stone-200 rounded-xl p-3.5">
+        <h3 className="text-sm font-medium text-stone-900">The AI suggests, a reviewer decides</h3>
+        <p className="mt-1 text-xs text-stone-600 leading-relaxed max-w-3xl">
+          The models need to be evaluated against real reviewer decisions before any check is
+          automated. The application stores each suggestion with the reviewer's decision, and a
+          rejection keeps the reviewer's note. That record is what measures agreement and supplies
+          the cases for retraining.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    CASE STUDY — AI WORKER (local prototype)
    Two interactive illustrations, kept as self-contained pages in
    public/portfolio-illustrations (copied from the project's own
@@ -2003,10 +2232,10 @@ const AI_WORKER_VIEWS = [
   },
 ];
 
-function AiWorkerCaseStudy() {
-  const [viewId, setViewId] = useState("flow");
-  const view = AI_WORKER_VIEWS.find((v) => v.id === viewId);
-  const [height, setHeight] = useState(view.height); // each view's usual height, until it is measured
+// An illustration page from public/portfolio-illustrations, shown in a frame as tall as its content.
+// Give it a key when the page changes, so each page starts from its own usual height.
+function IllustrationFrame({ src, title, height: usual }) {
+  const [height, setHeight] = useState(usual); // the page's usual height, until it is measured
   const frameRef = useRef(null);
 
   // The page in the frame is served from this site, so the frame takes its content's height and is
@@ -2045,7 +2274,24 @@ function AiWorkerCaseStudy() {
     frame.addEventListener("load", onLoad);
     if (frame.contentDocument && frame.contentDocument.readyState === "complete") onLoad();
     return () => { frame.removeEventListener("load", onLoad); if (stop) stop(); };
-  }, [viewId, fitFrame]);
+  }, [fitFrame]);
+
+
+  return (
+    <iframe
+      ref={frameRef}
+      src={src}
+      title={title}
+      scrolling="no"
+      className="block w-full rounded-2xl"
+      style={{ height, border: 0, background: "transparent" }}
+    />
+  );
+}
+
+function AiWorkerCaseStudy() {
+  const [viewId, setViewId] = useState("flow");
+  const view = AI_WORKER_VIEWS.find((v) => v.id === viewId);
 
   return (
     <div className="p-5 sm:p-6 space-y-5">
@@ -2061,7 +2307,7 @@ function AiWorkerCaseStudy() {
               key={v.id}
               type="button"
               aria-pressed={v.id === viewId}
-              onClick={() => { setViewId(v.id); setHeight(v.height); }}
+              onClick={() => setViewId(v.id)}
               className={`px-4 py-2 rounded-full font-mono text-xs uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 v.id === viewId ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
               }`}
@@ -2073,15 +2319,7 @@ function AiWorkerCaseStudy() {
         <p className="text-sm text-stone-600 flex-1" style={{ minWidth: "16rem" }}>{view.line}</p>
       </div>
 
-      <iframe
-        key={view.id}
-        ref={frameRef}
-        src={view.src}
-        title={view.title}
-        scrolling="no"
-        className="block w-full rounded-2xl"
-        style={{ height, border: 0, background: "transparent" }}
-      />
+      <IllustrationFrame key={view.id} src={view.src} title={view.title} height={view.height} />
 
       <p className="text-[11px] italic text-stone-500 leading-relaxed max-w-3xl">
         Sample messages, not live customer data. No messages are sent and no payments
@@ -2187,7 +2425,7 @@ export default function Portfolio() {
               {project.id === "ai-worker" && <AiWorkerCaseStudy />}
               {project.id === "pos-bakso" && <PosDemo />}
               {project.id === "affiliate-reco" && <AffiliateDemo />}
-              {project.id === "ai-detection" && <AiDetectionDemo />}
+              {project.id === "ai-detection" && <AiDetectionCaseStudy />}
             </Modal>
           </div>,
           document.body

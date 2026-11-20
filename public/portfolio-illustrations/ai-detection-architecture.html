@@ -1,0 +1,384 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Explore the architecture behind an AI photo-verification system: a technician mobile app, work-order data, a review application, two detector services and a reviewer."><title>AI Detection System architecture</title><style>/* Portfolio illustrations (styles shared with the AI Worker pages). Neutral, one accent, hairlines; content lives in illustrations.js. */
+:root{
+  --bg:#fafaf9;--paper:#fff;--ink:#1c1917;--muted:#57534e;--line:#e7e5e4;--line-strong:#d6d3d1;--wash:#f5f5f4;
+  --accent:#1f7a5c;--accent-soft:#e6f2ed;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.22,.8,.24,1);
+  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  color:var(--ink);background:var(--bg);font-synthesis:none;-webkit-font-smoothing:antialiased;
+}
+*{box-sizing:border-box}
+body{margin:0}
+button,a{-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+a{color:inherit}
+p{margin:0}
+.icon{width:20px;height:20px;display:block;flex-shrink:0}
+.small-icon{width:15px;height:15px}
+.logo{display:block;object-fit:contain;flex-shrink:0}
+
+/* Page frame */
+.shell{max-width:1320px;margin:auto;padding:28px 48px 40px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.brand{text-decoration:none;font-weight:650;font-size:15px;letter-spacing:-.01em}
+.page-nav{display:flex;gap:24px}
+.page-nav a{position:relative;text-decoration:none;font-size:14px;color:var(--muted);padding:6px 0;transition:color .2s}
+.page-nav a:after{content:'';position:absolute;left:0;right:0;bottom:0;height:1.5px;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.page-nav a:hover,.page-nav a.current{color:var(--ink)}
+.page-nav a:hover:after,.page-nav a.current:after{transform:scaleX(1)}
+.intro{padding:72px 0 44px;max-width:780px}
+h1{font-size:clamp(30px,4vw,54px);font-weight:620;letter-spacing:-.04em;line-height:1.05;margin:0 0 20px;text-wrap:balance}
+h1 .w{display:inline-block}
+.intro p{font-size:17px;line-height:1.6;color:var(--muted);max-width:620px}
+.intro .meta{font-size:13.5px;margin-top:18px}
+
+/* Explorer */
+.workspace{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;border-bottom:1px solid var(--line);padding:10px 16px}
+.filters{display:flex;gap:2px;flex-wrap:wrap}
+.pill{border:0;background:transparent;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--muted);padding:8px 12px;white-space:nowrap;transition:background .15s,color .15s,transform .12s}
+.pill:hover{color:var(--ink)}
+.pill[aria-pressed=true]{background:var(--wash);color:var(--ink)}
+.pill:active{transform:scale(.97)}
+.canvas-flag{font-size:13px;color:var(--muted);white-space:nowrap}
+.primary,.secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:550;border:1px solid var(--line-strong);background:var(--paper);transition:background .15s,border-color .15s,transform .15s var(--ease)}
+.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.primary:hover{background:#3a3532;transform:translateY(-1px)}
+.secondary:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.primary:active,.secondary:active:not(:disabled){transform:scale(.97)}
+.canvas-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px}
+.canvas-wrap{display:flex;flex-direction:column;position:relative;background:var(--bg);min-width:0;overflow:hidden}
+.canvas-header{padding:20px 24px 0}
+.canvas-header strong{display:block;font-size:14px;font-weight:600}
+.canvas-header p{font-size:13.5px;line-height:1.5;color:var(--muted);margin-top:3px;min-height:20px}
+.stage-viewport{position:relative;overflow:auto;width:100%;min-height:400px;margin-block:auto}
+.stage{position:relative;width:940px;height:600px;transform-origin:0 0}
+.connections{position:absolute;inset:0;width:940px;height:600px;pointer-events:none}
+.edge{stroke:var(--line-strong);stroke-width:1.5;fill:none;transition:stroke .3s,opacity .3s,stroke-width .3s}
+.edge.active{stroke:var(--accent);stroke-width:2}
+.edge.dim{opacity:.55}
+.edge-label{font:11px var(--mono);fill:var(--muted);paint-order:stroke;stroke:var(--bg);stroke-width:6px;stroke-linejoin:round}
+/* A pulse travels each active edge: twice after a click, continuously while a trace or walkthrough plays. */
+.pulse{fill:var(--accent);opacity:0;offset-distance:0%;offset-rotate:0deg}
+.edge.active+.pulse{animation:pulse 2.2s linear 2}
+.playing .edge.active+.pulse{animation-iteration-count:infinite}
+@keyframes pulse{0%{offset-distance:0%;opacity:0}12%{opacity:1}88%{opacity:1}100%{offset-distance:100%;opacity:0}}
+
+/* Nodes */
+.node{position:absolute;background:var(--paper);border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;text-align:left;padding:14px;gap:12px;transition:border-color .2s,transform .25s var(--ease),background .2s,box-shadow .25s;width:214px;min-height:82px}
+.node:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+.node:active{transform:scale(.985)}
+.node.connected{border-color:var(--line-strong)}
+.node.selected{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.node.dim{background:var(--wash);filter:grayscale(1)}
+.node.dim strong,.node.dim small{color:var(--muted)}
+.node>span:nth-child(2){min-width:0}
+.badge{width:38px;height:38px;display:grid;place-items:center;flex-shrink:0;border-radius:9px;background:var(--wash);color:var(--ink)}
+.badge.has-logo{background:var(--paper);border:1px solid var(--line)}
+.badge .logo{width:22px;height:22px}
+.node strong{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.node small{display:block;font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.node .number{position:absolute;right:10px;top:8px;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.group{position:absolute;border:1px dashed var(--line-strong);border-radius:14px;pointer-events:none}
+.group-label{position:absolute;left:16px;top:12px;font-size:12px;font-weight:500;color:var(--muted)}
+.note{position:absolute;font-size:12px;color:var(--muted)}
+.flow .node.done{background:var(--bg)}
+.flow .node.done .badge:not(.has-logo){background:var(--accent-soft);color:var(--accent)}
+
+/* Entry motion: applied only by script, only when motion is allowed. */
+.stage.pre .node,.stage.pre .edge,.stage.pre .edge-label,.stage.pre .group,.stage.pre .group-label,.stage.pre .note{opacity:0}
+.stage.enter .node{animation:rise .6s var(--ease) backwards;animation-delay:calc(var(--i)*70ms)}
+.stage.enter .edge{stroke-dasharray:1;animation:draw .8s var(--ease) backwards;animation-delay:calc(.35s + var(--e)*80ms)}
+.stage.enter .edge-label,.stage.enter .group,.stage.enter .group-label,.stage.enter .note{animation:fade .6s ease backwards;animation-delay:.9s}
+.stage.enter .group{animation-delay:.1s}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes draw{from{stroke-dashoffset:1;opacity:0}15%{opacity:1}to{stroke-dashoffset:0}}
+@keyframes fade{from{opacity:0}}
+
+/* Under the canvas */
+.canvas-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px 16px}
+.zoom{display:flex;gap:4px;align-items:center;margin-left:auto}
+.zoom button{display:grid;place-items:center;background:transparent;border:0;border-radius:7px;width:32px;height:32px;color:var(--muted);transition:background .15s,color .15s,transform .12s}
+.zoom button:hover:not(:disabled){background:var(--wash);color:var(--ink)}
+.zoom button:active:not(:disabled){transform:scale(.92)}
+.zoom output{font-size:12px;color:var(--muted);min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
+.journey-status{font-size:13px;color:var(--muted)}
+.step-nav{display:flex;gap:4px;flex-wrap:wrap}
+.step-nav button{width:30px;height:30px;border-radius:50%;background:transparent;border:1px solid transparent;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;transition:background .15s,color .15s,transform .12s}
+.step-nav button:hover{background:var(--wash);color:var(--ink)}
+.step-nav button:active{transform:scale(.92)}
+.step-nav button[aria-current=step]{background:var(--ink);color:#fff}
+
+/* Detail panel */
+.inspector{padding:24px;border-left:1px solid var(--line);background:var(--paper);min-height:540px}
+.inspector-top{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:22px;font-variant-numeric:tabular-nums}
+.detail-icon{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;background:var(--wash);margin-bottom:16px}
+.detail-icon.has-logo{background:var(--paper);border:1px solid var(--line)}
+.detail-icon .logo{width:26px;height:26px}
+.detail-icon svg{width:22px;height:22px}
+.inspector h2{font-size:22px;letter-spacing:-.03em;line-height:1.2;margin:0 0 10px;font-weight:620}
+.inspector .description{font-size:14px;line-height:1.65;color:var(--muted);margin:0 0 18px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;white-space:nowrap}
+.tag .logo{width:14px;height:14px}
+.detail-label{font-size:12.5px;font-weight:600;margin:0 0 8px}
+.why{font-size:14px;line-height:1.65;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}
+.why .detail-label{color:var(--ink)}
+.connect-list{margin-top:22px}
+.connect-list button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:transparent;padding:10px 0;font-size:14px;text-align:left;border-top:1px solid var(--line);transition:color .15s}
+.connect-list button .icon{color:var(--muted);transition:transform .25s var(--ease),color .15s}
+.connect-list button:hover{color:var(--accent)}
+.connect-list button:hover .icon{transform:translateX(4px);color:var(--accent)}
+.progress-track{height:2px;background:var(--line);margin:0 0 22px;overflow:hidden}
+.progress-track div{height:100%;background:var(--accent);transform-origin:left;transition:transform .4s var(--ease)}
+.story-card{margin:0 0 20px}
+.story-head{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.story-head .icon,.story-head .logo{width:15px;height:15px}
+.bubble{position:relative;display:inline-block;max-width:100%;padding:11px 14px;background:var(--wash);border-radius:14px 14px 14px 4px;font-size:14px;line-height:1.55}
+.control-row{display:flex;gap:6px;align-items:center;margin-top:22px}
+.control-row .primary{flex:1}
+.control-row .secondary{padding:9px;min-width:38px}
+/* The panel animates only when its subject changes. */
+.motion .detail.swap .detail-main>*,.motion .detail.swap .detail-side>*{animation:rise .45s var(--ease) backwards}
+.motion .detail.swap .detail-main>:nth-child(2){animation-delay:40ms}
+.motion .detail.swap .detail-main>:nth-child(3){animation-delay:80ms}
+.motion .detail.swap .detail-main>:nth-child(4){animation-delay:120ms}
+.motion .detail.swap .detail-main>:nth-child(n+5){animation-delay:160ms}
+.motion .detail.swap .detail-side>*{animation-delay:200ms}
+/* A message arrives: three dots, then the text. */
+.motion .detail.swap .bubble span{animation:fade .35s ease .55s backwards}
+.motion .detail.swap .bubble:before{content:'';position:absolute;left:14px;top:50%;width:26px;height:6px;margin-top:-3px;background:radial-gradient(circle,var(--muted) 2.5px,transparent 3px) 0 0/10px 6px repeat-x;opacity:0;animation:typing .55s ease .1s}
+@keyframes typing{0%{opacity:0}25%,75%{opacity:.7}100%{opacity:0}}
+
+/* Below the explorer */
+.toolchain{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.toolchain summary{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:550;cursor:pointer;padding:16px 20px;list-style:none;border-radius:12px}
+.toolchain summary::-webkit-details-marker{display:none}
+.toolchain summary:after{content:'+';font-size:18px;font-weight:400;color:var(--muted);transition:transform .3s var(--ease)}
+.toolchain[open] summary:after{transform:rotate(45deg)}
+.toolchain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;border-top:1px solid var(--line);padding:20px}
+.toolchain[open] .toolchain-grid{animation:rise .4s var(--ease)}
+.toolchain-grid strong{display:block;font-size:13px;font-weight:600;margin-bottom:10px}
+.toolchain-grid .tags{margin-bottom:0}
+.toolchain-grid p{font-size:13px;color:var(--muted);line-height:1.6;margin-top:12px}
+.takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:56px}
+.takeaway{border-top:1px solid var(--ink);padding-top:16px}
+.takeaway strong{font-size:15px;font-weight:600;display:block;margin-bottom:6px;letter-spacing:-.01em}
+.takeaway p{font-size:14px;line-height:1.6;color:var(--muted)}
+.footer{display:flex;justify-content:space-between;gap:20px;font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:56px}
+
+/* Scroll: a hairline shows reading progress, and each block eases in the first time it is seen. */
+.scroll-progress{position:fixed;inset:0 0 auto 0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;z-index:5}
+.motion [data-reveal]{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease);transition-delay:calc(var(--i,0)*90ms)}
+.motion [data-reveal].in{opacity:1;transform:none}
+.motion h1 .w{animation:rise .7s var(--ease) backwards;animation-delay:calc(var(--i)*45ms)}
+
+/* Embedded in a case study: the explorer alone, edge to edge. */
+html.embed,.embed{background:transparent}
+.embed .shell{padding:0;max-width:none}
+.embed .topline,.embed .intro,.embed .takeaways,.embed .footer,.embed .toolchain,.embed .scroll-progress{display:none}
+
+/* Narrow frames (a portfolio modal, a tablet): the diagram takes the full width and the detail sits under it. */
+@media(max-width:1240px){
+  .canvas-layout{grid-template-columns:1fr}
+  .stage-viewport{min-height:0}
+  .inspector{border-left:0;border-top:1px solid var(--line);min-height:0}
+  .detail{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:8px 40px;align-items:start}
+  .detail-main .tags,.detail-main .story-card{margin-bottom:0}
+  .detail-side .why{border-top:0;padding-top:0}
+  .detail-side .why:first-child{margin-top:40px}
+}
+@media(max-width:1050px){.shell{padding:24px 24px 32px}.intro{padding:48px 0 32px}}
+@media(max-width:760px){
+  .shell{padding:18px 16px 28px}
+  .intro{padding:36px 0 26px}
+  .intro p{font-size:15.5px}
+  .toolbar{align-items:start;flex-wrap:wrap}
+  .canvas-header{padding:16px 16px 0}
+  .canvas-bottom{flex-wrap:wrap}
+  .takeaways,.toolchain-grid{grid-template-columns:1fr;gap:22px}
+  .takeaways,.footer{margin-top:40px}
+  .footer{flex-direction:column;gap:6px}
+}
+/* Phones: a readable card list replaces the scaled diagram. */
+@media(max-width:600px){
+  .detail{grid-template-columns:1fr;gap:20px}
+  .detail-side .why:first-child{margin-top:0;border-top:1px solid var(--line);padding-top:18px}
+  .stage-viewport{height:auto!important;max-height:none!important;overflow:visible}
+  .stage{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:auto;height:auto;transform:none!important;margin:0!important;padding:16px}
+  .stage>.connections,.stage>.group,.stage>div,.stage>.note{display:none}
+  .stage .node{position:relative;left:auto!important;top:auto!important;width:100%;height:100%;min-height:120px;align-items:flex-start;flex-direction:column;padding:13px;gap:9px}
+  .stage .node:hover{transform:none}
+  .stage .node small{font-size:12px}
+  .flow .stage{grid-template-columns:1fr;gap:20px}
+  .flow .stage .node{flex-direction:row;align-items:center;min-height:74px;gap:12px;padding:14px}
+  .flow .stage .node strong{font-size:14.5px}
+  .flow .stage .node:after{content:'';position:absolute;left:32px;bottom:-21px;height:20px;border-left:1px solid var(--line-strong)}
+  .flow .stage .node:last-of-type:after{display:none}
+  .zoom{display:none}
+}
+/* Touch: every control is at least 44px. */
+@media(pointer:coarse){
+  .pill,.primary,.secondary,.connect-list button,.page-nav a{min-height:44px}
+  .page-nav a{display:flex;align-items:center}
+  .step-nav button,.zoom button{width:44px;height:44px}
+  .control-row .secondary{min-width:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+@media print{
+  .shell{padding:0}
+  .toolbar,.zoom,.control-row,.scroll-progress{display:none}
+  .inspector{break-inside:avoid}
+}
+</style></head><body data-view="stack"><main id="app"></main><noscript>This interactive illustration needs JavaScript. The AI Detection System has a technician mobile app, a work-order database and photo storage, a PHP review application, two Python and FastAPI detector services, and a reviewer who decides on every suggested check.</noscript><script>'use strict';
+// Real product logos as data URIs, so the illustrations need no network.
+// Sources: gilbarbara/logos (CC0), Simple Icons (CC0), vscode-icons (MIT). Marks are trademarks of their owners.
+const logos={
+ python:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU1IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IHgxPSIxMi45NTkzNTk0JSIgeTE9IjEyLjAzOTM5MjglIiB4Mj0iNzkuNjM4ODMyNSUiIHkyPSI3OC4yMDA4NTM4JSIgaWQ9ImxpbmVhckdyYWRpZW50LTEiPjxzdG9wIHN0b3AtY29sb3I9IiMzODdFQjgiIG9mZnNldD0iMCUiPjwvc3RvcD48c3RvcCBzdG9wLWNvbG9yPSIjMzY2OTk0IiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCB4MT0iMTkuMTI3NTI1JSIgeTE9IjIwLjU3OTE4MTMlIiB4Mj0iOTAuNzQxNTMyOCUiIHkyPSI4OC40MjkwMzcyJSIgaWQ9ImxpbmVhckdyYWRpZW50LTIiPjxzdG9wIHN0b3AtY29sb3I9IiNGRkUwNTIiIG9mZnNldD0iMCUiPjwvc3RvcD48c3RvcCBzdG9wLWNvbG9yPSIjRkZDMzMxIiBvZmZzZXQ9IjEwMCUiPjwvc3RvcD48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Zz48cGF0aCBkPSJNMTI2LjkxNTg2NiwwLjA3MjI3NTU0OTEgQzYyLjA4MzU4MzEsMC4wNzIyODAxNzMzIDY2LjEzMjEyODgsMjguMTg3NDY0OCA2Ni4xMzIxMjg4LDI4LjE4NzQ2NDggTDY2LjIwNDQwNDMsNTcuMzE0NTExNSBMMTI4LjA3MjI3Niw1Ny4zMTQ1MTE1IEwxMjguMDcyMjc2LDY2LjA1OTg1MzIgTDQxLjYzMDcxNzEsNjYuMDU5ODUzMiBDNDEuNjMwNzE3MSw2Ni4wNTk4NTMyIDAuMTQ0NTUxMDk4LDYxLjM1NDk0MzggMC4xNDQ1NTEwOTgsMTI2Ljc3MTMxNSBDMC4xNDQ1NDY0NzQsMTkyLjE4NzY3MyAzNi4zNTQ2MDE5LDE4OS44Njc4NzEgMzYuMzU0NjAxOSwxODkuODY3ODcxIEw1Ny45NjQ5OTE1LDE4OS44Njc4NzEgTDU3Ljk2NDk5MTUsMTU5LjUxMjE0IEM1Ny45NjQ5OTE1LDE1OS41MTIxNCA1Ni44MDAxMzYzLDEyMy4zMDIwODkgOTMuNTk2ODM3OSwxMjMuMzAyMDg5IEwxNTQuOTU4NzgsMTIzLjMwMjA4OSBDMTU0Ljk1ODc4LDEyMy4zMDIwODkgMTg5LjQzNDIxOCwxMjMuODU5Mzg2IDE4OS40MzQyMTgsODkuOTgzMDYwNCBMMTg5LjQzNDIxOCwzMy45Njk1MDg4IEMxODkuNDM0MjE4LDMzLjk2OTUwNDEgMTk0LjY2ODU0MSwwLjA3MjI3NTU0OTEgMTI2LjkxNTg2NiwwLjA3MjI3NTU0OTEgTDEyNi45MTU4NjYsMC4wNzIyNzU1NDkxIEwxMjYuOTE1ODY2LDAuMDcyMjc1NTQ5MSBaIE05Mi44MDE4MDY5LDE5LjY1ODk0OTcgQzk4Ljk1NzIwNjgsMTkuNjU4OTQ1MiAxMDMuOTMyMjQyLDI0LjYzMzk4NDYgMTAzLjkzMjI0MiwzMC43ODkzODQ1IEMxMDMuOTMyMjQ2LDM2Ljk0NDc4NDQgOTguOTU3MjA2OCw0MS45MTk4MTkzIDkyLjgwMTgwNjksNDEuOTE5ODE5MyBDODYuNjQ2NDA3LDQxLjkxOTgyMzkgODEuNjcxMzcyMSwzNi45NDQ3ODQ0IDgxLjY3MTM3MjEsMzAuNzg5Mzg0NSBDODEuNjcxMzY3NCwyNC42MzM5ODQ2IDg2LjY0NjQwNywxOS42NTg5NDk3IDkyLjgwMTgwNjksMTkuNjU4OTQ5NyBMOTIuODAxODA2OSwxOS42NTg5NDk3IEw5Mi44MDE4MDY5LDE5LjY1ODk0OTcgWiIgZmlsbD0idXJsKCNsaW5lYXJHcmFkaWVudC0xKSI+PC9wYXRoPjxwYXRoIGQ9Ik0xMjguNzU3MTAxLDI1NC4xMjYyNzEgQzE5My41ODk0MDMsMjU0LjEyNjI3MSAxODkuNTQwODM5LDIyNi4wMTEwODEgMTg5LjU0MDgzOSwyMjYuMDExMDgxIEwxODkuNDY4NTY0LDE5Ni44ODQwMzUgTDEyNy42MDA2OTIsMTk2Ljg4NDAzNSBMMTI3LjYwMDY5MiwxODguMTM4NjkzIEwyMTQuMDQyMjUxLDE4OC4xMzg2OTMgQzIxNC4wNDIyNTEsMTg4LjEzODY5MyAyNTUuNTI4NDE3LDE5Mi44NDM1ODkgMjU1LjUyODQxNywxMjcuNDI3MjA4IEMyNTUuNTI4NDQsNjIuMDEwODU2NiAyMTkuMzE4MzY2LDY0LjMzMDY1ODkgMjE5LjMxODM2Niw2NC4zMzA2NTg5IEwxOTcuNzA3OTc2LDY0LjMzMDY1ODkgTDE5Ny43MDc5NzYsOTQuNjg2MzgzMiBDMTk3LjcwNzk3Niw5NC42ODYzODMyIDE5OC44NzI4NSwxMzAuODk2NDM0IDE2Mi4wNzYxMywxMzAuODk2NDM0IEwxMDAuNzE0MTgyLDEzMC44OTY0MzQgQzEwMC43MTQxODIsMTMwLjg5NjQzNCA2Ni4yMzg3NDUsMTMwLjMzOTEzOCA2Ni4yMzg3NDUsMTY0LjIxNTQ4NiBMNjYuMjM4NzQ1LDIyMC4yMjkwMzggQzY2LjIzODc0NSwyMjAuMjI5MDM4IDYxLjAwNDQyMjUsMjU0LjEyNjI3MSAxMjguNzU3MTAxLDI1NC4xMjYyNzEgTDEyOC43NTcxMDEsMjU0LjEyNjI3MSBMMTI4Ljc1NzEwMSwyNTQuMTI2MjcxIFogTTE2Mi44NzExNiwyMzQuNTM5NTk3IEMxNTYuNzE1NzU5LDIzNC41Mzk1OTcgMTUxLjc0MDcyNiwyMjkuNTY0NTY0IDE1MS43NDA3MjYsMjIzLjQwOTE2MiBDMTUxLjc0MDcyNiwyMTcuMjUzNzU5IDE1Ni43MTU3NTksMjEyLjI3ODcyNyAxNjIuODcxMTYsMjEyLjI3ODcyNyBDMTY5LjAyNjU2MywyMTIuMjc4NzI3IDE3NC4wMDE1OTUsMjE3LjI1Mzc1OSAxNzQuMDAxNTk1LDIyMy40MDkxNjIgQzE3NC4wMDE2MTgsMjI5LjU2NDU2NCAxNjkuMDI2NTYzLDIzNC41Mzk1OTcgMTYyLjg3MTE2LDIzNC41Mzk1OTcgTDE2Mi44NzExNiwyMzQuNTM5NTk3IEwxNjIuODcxMTYsMjM0LjUzOTU5NyBaIiBmaWxsPSJ1cmwoI2xpbmVhckdyYWRpZW50LTIpIj48L3BhdGg+PC9nPjwvc3ZnPg==',
+ fastapi:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiI+PGc+PHBhdGggZD0iTTEyOC4wMDAxNzQsNy4xMDU0MjczNmUtMTUgQzU3LjMzMDcxMDQsNy4xMDU0MjczNmUtMTUgMCw1Ny4zMzA2MTgzIDAsMTI3Ljk5OTk2NCBDMCwxOTguNjY5MzY2IDU3LjMzMDcxMDQsMjU2LjAwMDA1NiAxMjguMDAwMTc0LDI1Ni4wMDAwNTYgQzE5OC42NjkzMzQsMjU2LjAwMDA1NiAyNTYsMTk4LjY2OTM2NiAyNTYsMTI3Ljk5OTk2NCBDMjU2LDU3LjMzMDYxODMgMTk4LjY2OTMzNCw3LjEwNTQyNzM2ZS0xNSAxMjguMDAwMTc0LDcuMTA1NDI3MzZlLTE1IFogTTEyMS4zMzA2NDIsMjMwLjYwNTE4IEwxMjEuMzMwNjQyLDE1MC4zMTY2MiBMNzYuNjk3NjM2MiwxNTAuMzE2NjIgTDE0MC44MjU2NjMsMjUuMzk0ODEyMyBMMTQwLjgyNTY2MywxMDUuNjgzMzI4IEwxODMuNzkxNjY0LDEwNS42ODMzMjggTDEyMS4zMzA2NDIsMjMwLjYwNTE4IFoiIGZpbGw9IiMwMDk2ODgiPjwvcGF0aD48L2c+PC9zdmc+',
+ docker:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMTg1IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjE4NSI+PGc+PHBhdGggZD0iTTI1MC43MTU3NDUsNzAuNDk3MTY2NiBDMjQ0Ljk1MTEwMiw2Ni40OTczMjc3IDIzMS43NDA0NjQsNjQuOTk3Mzg4IDIyMS40MTIxNDYsNjYuOTk3MzA3MSBDMjIwLjIxMTE3OSw1Ni45OTc3MDkyIDIxNC42ODY3Myw0OC4yNDgwNjA5IDIwNS4wNzg5OTMsNDAuNDk4MzcyNCBMMTk5LjU1NDU0NCwzNi40OTg1MzMxIEwxOTUuNzExNDQ5LDQyLjI0ODMwMiBDMTkwLjkwNzU4LDQ5Ljc0ODAwMDYgMTg4LjUwNTY0Niw2MC4yNDc1Nzg2IDE4OS4yMjYyMjYsNzAuMjQ3MTc2OSBDMTg5LjQ2NjQyLDczLjc0NzAzNjQgMTkwLjY2NzM4Nyw3OS45OTY3ODQ3IDE5NC4yNzAyODksODUuNDk2NTY0IEMxOTAuOTA3NTgsODcuNDk2NDgzOCAxODMuOTQxOTcxLDg5Ljk5NjM4MyAxNzQuODE0NjIxLDg5Ljk5NjM4MyBMMS4xNTQ3Njk5OCw4OS45OTYzODMgTDAuNjc0MzgzMTA0LDkxLjk5NjMwMjggQy0xLjAwNjk3MDkzLDEwMS45OTU5IC0xLjAwNjk3MDkzLDEzMy4yNDQ2NDUgMTguNjg4ODkwNCwxNTcuMjQzNjgxIEMzMy41ODA4ODMxLDE3NS40OTI5NDcgNTUuNjc4Njc4OCwxODQuNzQyNTc1IDg0Ljc0MjA4NDIsMTg0Ljc0MjU3NSBDMTQ3LjY3Mjc2MywxODQuNzQyNTc1IDE5NC4yNzAyODksMTU0LjQ5Mzc5MSAyMTYuMTI3ODkxLDk5Ljc0NTk5MDkgQzIyNC43NzQ4NTQsOTkuOTk1OTgxMyAyNDMuMjY5NzQ4LDk5Ljc0NTk5MDkgMjUyLjYzNzI5Miw4MC45OTY3NDUgQzI1Mi44Nzc0ODYsODAuNDk2NzY0OSAyNTMuMzU3ODcyLDc5LjQ5NjgwNDYgMjU1LjAzOTIyNyw3NS43NDY5NTU0IEwyNTYsNzMuNzQ3MDM2NCBMMjUwLjcxNTc0NSw3MC40OTcxNjY2IEwyNTAuNzE1NzQ1LDcwLjQ5NzE2NjYgWiBNMTM5Ljk4NjU3MywwIEwxMTMuNTY1Mjk1LDAgTDExMy41NjUyOTUsMjQuOTk4OTk1MiBMMTM5Ljk4NjU3MywyNC45OTg5OTUyIEwxMzkuOTg2NTczLDAgTDEzOS45ODY1NzMsMCBaIE0xMzkuOTg2NTczLDI5Ljk5ODc5NDMgTDExMy41NjUyOTUsMjkuOTk4Nzk0MyBMMTEzLjU2NTI5NSw1NC45OTc3ODk2IEwxMzkuOTg2NTczLDU0Ljk5Nzc4OTYgTDEzOS45ODY1NzMsMjkuOTk4Nzk0MyBMMTM5Ljk4NjU3MywyOS45OTg3OTQzIFogTTEwOC43NjE0MjcsMjkuOTk4Nzk0MyBMODIuMzQwMTQ5NSwyOS45OTg3OTQzIEw4Mi4zNDAxNDk1LDU0Ljk5Nzc4OTYgTDEwOC43NjE0MjcsNTQuOTk3Nzg5NiBMMTA4Ljc2MTQyNywyOS45OTg3OTQzIEwxMDguNzYxNDI3LDI5Ljk5ODc5NDMgWiBNNzcuNTM2MjgxNCwyOS45OTg3OTQzIEw1MS4xMTUwMDM3LDI5Ljk5ODc5NDMgTDUxLjExNTAwMzcsNTQuOTk3Nzg5NiBMNzcuNTM2MjgxNCw1NC45OTc3ODk2IEw3Ny41MzYyODE0LDI5Ljk5ODc5NDMgTDc3LjUzNjI4MTQsMjkuOTk4Nzk0MyBaIE00Ni4zMTExMzUsNTkuOTk3NTg4NiBMMTkuODg5ODU3Niw1OS45OTc1ODg2IEwxOS44ODk4NTc2LDg0Ljk5NjU4MzkgTDQ2LjMxMTEzNSw4NC45OTY1ODM5IEw0Ni4zMTExMzUsNTkuOTk3NTg4NiBMNDYuMzExMTM1LDU5Ljk5NzU4ODYgWiBNNzcuNTM2MjgxNCw1OS45OTc1ODg2IEw1MS4xMTUwMDM3LDU5Ljk5NzU4ODYgTDUxLjExNTAwMzcsODQuOTk2NTgzOSBMNzcuNTM2MjgxNCw4NC45OTY1ODM5IEw3Ny41MzYyODE0LDU5Ljk5NzU4ODYgTDc3LjUzNjI4MTQsNTkuOTk3NTg4NiBaIE0xMDguNzYxNDI3LDU5Ljk5NzU4ODYgTDgyLjM0MDE0OTUsNTkuOTk3NTg4NiBMODIuMzQwMTQ5NSw4NC45OTY1ODM5IEwxMDguNzYxNDI3LDg0Ljk5NjU4MzkgTDEwOC43NjE0MjcsNTkuOTk3NTg4NiBMMTA4Ljc2MTQyNyw1OS45OTc1ODg2IFogTTEzOS45ODY1NzMsNTkuOTk3NTg4NiBMMTEzLjU2NTI5NSw1OS45OTc1ODg2IEwxMTMuNTY1Mjk1LDg0Ljk5NjU4MzkgTDEzOS45ODY1NzMsODQuOTk2NTgzOSBMMTM5Ljk4NjU3Myw1OS45OTc1ODg2IEwxMzkuOTg2NTczLDU5Ljk5NzU4ODYgWiBNMTcxLjIxMTcxOSw1OS45OTc1ODg2IEwxNDQuNzkwNDQxLDU5Ljk5NzU4ODYgTDE0NC43OTA0NDEsODQuOTk2NTgzOSBMMTcxLjIxMTcxOSw4NC45OTY1ODM5IEwxNzEuMjExNzE5LDU5Ljk5NzU4ODYgTDE3MS4yMTE3MTksNTkuOTk3NTg4NiBaIiBmaWxsPSIjMjM5NkVEIiBmaWxsLXJ1bGU9Im5vbnplcm8iPjwvcGF0aD48L2c+PC9zdmc+',
+ pytest:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj48cGF0aCBmaWxsPSIjNjk2OTY5IiBkPSJNNC44NiA0LjIxaDIyLjI4YTEuMSAxLjEgMCAxIDEgMCAyLjE5SDQuODZhMS4xIDEuMSAwIDAgMSAwLTIuMTkiLz48cGF0aCBmaWxsPSIjMDA5ZmUzIiBkPSJNNS4wNSAyaDQuNDh2MS4wM0g1LjA1em0wIDUuNTNoNC40OFYzMEg1LjA1eiIvPjxwYXRoIGZpbGw9IiNjN2QzMDIiIGQ9Ik0xMC45MSAyaDQuNDh2MS4wM2gtNC40OHptMCA1LjUzaDQuNDh2MTguNDRoLTQuNDh6Ii8+PHBhdGggZmlsbD0iI2YwN2UxNiIgZD0iTTE2LjcgMmg0LjQ3djEuMDNIMTYuN3ptMCA1LjUzaDQuNDh2MTIuMzFIMTYuN3oiLz48cGF0aCBmaWxsPSIjZGYyODE1IiBkPSJNMjIuNDUgMmg0LjQ4djEuMDNoLTQuNDh6bTAgNS41M2g0LjQ4djcuNThoLTQuNDh6Ii8+PC9zdmc+',
+ php:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzc3N0JCNCIgZD0iTTcuMDEgMTAuMjA3aC0uOTQ0bC0uNTE1IDIuNjQ4aC44MzhjLjU1NiAwIC45Ny0uMTA1IDEuMjQyLS4zMTQuMjcyLS4yMS40NTUtLjU1OS41NS0xLjA0OS4wOTItLjQ3LjA1LS44MDItLjEyNC0uOTk1LS4xNzUtLjE5My0uNTIzLS4yOS0xLjA0Ny0uMjl6TTEyIDUuNjg4QzUuMzczIDUuNjg4IDAgOC41MTQgMCAxMnM1LjM3MyA2LjMxMyAxMiA2LjMxM1MyNCAxNS40ODYgMjQgMTJjMC0zLjQ4Ni01LjM3My02LjMxMi0xMi02LjMxMnptLTMuMjYgNy40NTFjLS4yNjEuMjUtLjU3NS40MzgtLjkxNy41NTEtLjMzNi4xMDgtLjc2NS4xNjQtMS4yODUuMTY0SDUuMzU3bC0uMzI3IDEuNjgxSDMuNjUybDEuMjMtNi4zMjZoMi42NWMuNzk3IDAgMS4zNzguMjA5IDEuNzQ0LjYyOC4zNjYuNDE4LjQ3NiAxLjAwMi4zMyAxLjc1MmEyLjgzNiAyLjgzNiAwIDAgMS0uMzA1Ljg0N2MtLjE0My4yNTUtLjMzLjQ5LS41NjEuNzAzem00LjAyNC43MTVsLjU0My0yLjc5OWMuMDYzLS4zMTguMDM5LS41MzYtLjA2OC0uNjUxLS4xMDctLjExNi0uMzM2LS4xNzQtLjY4Ny0uMTc0SDExLjQ2bC0uNzA0IDMuNjI1SDkuMzg4bDEuMjMtNi4zMjdoMS4zNjdsLS4zMjcgMS42ODJoMS4yMThjLjc2NyAwIDEuMjk1LjEzNCAxLjU4Ni40MDFzLjM3OC43LjI2MyAxLjI5OWwtLjU3MiAyLjk0NGgtMS4zODl6bTcuNTk3LTIuMjY1YTIuNzgyIDIuNzgyIDAgMCAxLS4zMDUuODQ3Yy0uMTQzLjI1NS0uMzMuNDktLjU2MS43MDNhMi40NCAyLjQ0IDAgMCAxLS45MTcuNTUxYy0uMzM2LjEwOC0uNzY1LjE2NC0xLjI4Ni4xNjRoLTEuMThsLS4zMjcgMS42ODJoLTEuMzc4bDEuMjMtNi4zMjZoMi42NDljLjc5NyAwIDEuMzc4LjIwOSAxLjc0NC42MjguMzY2LjQxNy40NzcgMS4wMDEuMzMxIDEuNzUxek0xNy43NjYgMTAuMjA3aC0uOTQzbC0uNTE2IDIuNjQ4aC44MzhjLjU1NyAwIC45NzEtLjEwNSAxLjI0Mi0uMzE0LjI3Mi0uMjEuNDU1LS41NTkuNTUxLTEuMDQ5LjA5Mi0uNDcuMDQ5LS44MDItLjEyNS0uOTk1cy0uNTI0LS4yOS0xLjA0Ny0uMjl6Ii8+PC9zdmc+',
+ opencv:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMzE3IiB3aWR0aD0iMjU2IiBoZWlnaHQ9IjMxNyI+PGc+CgkJPHBhdGggZD0iTTk2Ljg5ODgyOTUsMTExLjU3NzQ3OCBDNzMuNTI0Mjk1NCw5OC4wODIxODQ1IDYyLjEyODIzMzcsNzAuNTY5NjU3NyA2OS4xMTM5MTE3LDQ0LjQ5ODc1MjYgQzc2LjA5OTU4OTYsMTguNDI3ODQ3NSA5OS43MjUxMzIsMC4yOTkzMzEyMTEgMTI2LjcxNTcxOSwwLjI5OTMzMTIxMSBDMTUzLjcwNjMwNiwwLjI5OTMzMTIxMSAxNzcuMzMxODQ4LDE4LjQyNzg0NzUgMTg0LjMxNzUyNiw0NC40OTg3NTI2IEMxOTEuMzAzMjA0LDcwLjU2OTY1NzcgMTc5LjkwNzE0Myw5OC4wODIxODQ1IDE1Ni41MzI2MDksMTExLjU3NzQ3OCBMMTM4LjU3Nzc1OSw4MC40Nzg3NjY3IEMxNDcuODc2ODQsNzUuMTA5OTM5OSAxNTIuNDEwNTMsNjQuMTY0NjQzNCAxNDkuNjMxNDIxLDUzLjc5Mjg2NjUgQzE0Ni44NTIzMTIsNDMuNDIxMDg5NyAxMzcuNDUzMzczLDM2LjIwOTAzIDEyNi43MTU3MTksMzYuMjA5MDMgQzExNS45NzgwNjYsMzYuMjA5MDMgMTA2LjU3OTEyNiw0My40MjEwODk3IDEwMy44MDAwMTcsNTMuNzkyODY2NSBDMTAxLjAyMDkwOCw2NC4xNjQ2NDM0IDEwNS41NTQ1OTgsNzUuMTA5OTM5OSAxMTQuODUzNjc5LDgwLjQ3ODc2NjcgTDk2Ljg5ODgyOTUsMTExLjU3NzQ3OCBaIiBmaWxsPSIjRkYwMTAxIj48L3BhdGg+CgkJPHBhdGggZD0iTTE2NC45NjU3MTksMjM3LjI5MjY0MiBDMTQxLjU5MTE4NSwyMjMuNzk3MzQ4IDEzMC4xOTUxMjMsMTk2LjI4NDgyMiAxMzcuMTgwODAxLDE3MC4yMTM5MTcgQzE0NC4xNjY0NzksMTQ0LjE0MzAxMSAxNjcuNzkyMDIyLDEyNi4wMTQ0OTUgMTk0Ljc4MjYwOSwxMjYuMDE0NDk1IEMyMjEuNzczMTk2LDEyNi4wMTQ0OTUgMjQ1LjM5ODczOCwxNDQuMTQzMDExIDI1Mi4zODQ0MTYsMTcwLjIxMzkxNyBDMjU5LjM3MDA5NCwxOTYuMjg0ODIyIDI0Ny45NzQwMzIsMjIzLjc5NzM0OCAyMjQuNTk5NDk4LDIzNy4yOTI2NDIgTDIwNi42NDQ2NDksMjA2LjE5MzkzMSBDMjE1Ljk0MzczLDIwMC44MjUxMDQgMjIwLjQ3NzQyLDE4OS44Nzk4MDcgMjE3LjY5ODMxMSwxNzkuNTA4MDMxIEMyMTQuOTE5MjAxLDE2OS4xMzYyNTQgMjA1LjUyMDI2MiwxNjEuOTI0MTk0IDE5NC43ODI2MDksMTYxLjkyNDE5NCBDMTg0LjA0NDk1NSwxNjEuOTI0MTk0IDE3NC42NDYwMTYsMTY5LjEzNjI1NCAxNzEuODY2OTA3LDE3OS41MDgwMzEgQzE2OS4wODc3OTgsMTg5Ljg3OTgwNyAxNzMuNjIxNDg4LDIwMC44MjUxMDQgMTgyLjkyMDU2OSwyMDYuMTkzOTMxIEwxNjQuOTY1NzE5LDIzNy4yOTI2NDIgWiIgZmlsbD0iIzAxMDFGRiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTk0Ljc4MjYwOSwgMTgxLjY1MzU2OSkgcm90YXRlKDE4MC4wMDAwMDApIHRyYW5zbGF0ZSgtMTk0Ljc4MjYwOSwgLTE4MS42NTM1NjkpICI+PC9wYXRoPgoJCTxwYXRoIGQ9Ik0xMTkuNTY2ODksMTc3LjY1ODg2MyBDMTE5LjU2Njg5LDIwNC42NDk0NSAxMDEuNDM4MzczLDIyOC4yNzQ5OTIgNzUuMzY3NDY4MSwyMzUuMjYwNjcgQzQ5LjI5NjU2MywyNDIuMjQ2MzQ4IDIxLjc4NDAzNjIsMjMwLjg1MDI4NyA4LjI4ODc0MjY5LDIwNy40NzU3NTIgQy01LjIwNjU1MDg0LDE4NC4xMDEyMTggLTEuMzE5NTY2NDEsMTU0LjU3NjY0IDE3Ljc2NTY2MDcsMTM1LjQ5MTQxMyBDMzYuODUwODg3OSwxMTYuNDA2MTg2IDY2LjM3NTQ2NTksMTEyLjUxOTIwMiA4OS43NDk5OTk5LDEyNi4wMTQ0OTUgTDcxLjc5NTE1MDYsMTU3LjExMzIwNyBDNjIuNDk2MDY5OSwxNTEuNzQ0MzggNTAuNzUwMzE5OSwxNTMuMjkwNzM3IDQzLjE1NzY1MjMsMTYwLjg4MzQwNSBDMzUuNTY0OTg0NywxNjguNDc2MDcyIDM0LjAxODYyNzMsMTgwLjIyMTgyMiAzOS4zODc0NTQxLDE4OS41MjA5MDMgQzQ0Ljc1NjI4MDgsMTk4LjgxOTk4NCA1NS43MDE1Nzc0LDIwMy4zNTM2NzQgNjYuMDczMzU0MiwyMDAuNTc0NTY1IEM3Ni40NDUxMzEsMTk3Ljc5NTQ1NiA4My42NTcxOTA3LDE4OC4zOTY1MTYgODMuNjU3MTkwNywxNzcuNjU4ODYzIEwxMTkuNTY2ODksMTc3LjY1ODg2MyBaIiBmaWxsPSIjMDFGRjAxIj48L3BhdGg+CgkJPHBhdGggZD0iTTE3LjMyOTIzMDgsMjUxLjU5MDYzNSBDMjIuMzc2NDU0OCwyNTEuMTM2ODU2IDI3LjQ3OTMzMTEsMjUxLjE0MTEzNyAzMi41MDA4Njk2LDI1MS44NjAzMzQgQzM1LjU5NTk4NjYsMjUyLjQwODI5NCAzOC44Nzk0NjQ5LDI1My4yMDg4MjkgNDEuMjA0MDEzNCwyNTUuNDY0ODgzIEM0My42Mzk4NjYyLDI1OC4xODMyNzggNDQuMjM5MTk3MywyNjEuOTU5MDY0IDQ0Ljc3NDMxNDQsMjY1LjQzOTQ2NSBDNDUuNjUxOTA2NCwyNzIuNjYxNDA1IDQ1LjU0OTE2MzksMjc5Ljk4NjA4NyA0NC43NzQzMTQ0LDI4Ny4yMTIzMDggQzQ0LjI1NjMyMTEsMjkwLjczOTc5OSA0My43NDY4ODk2LDI5NC41NDk4MzMgNDEuNDM1MTgzOSwyOTcuNDE4MDYgQzM4LjkxMzcxMjQsMjk5Ljk3ODA2IDM1LjE4OTI5NzcsMzAwLjcwNTgxOSAzMS43NzMxMTA0LDMwMS4yNDUyMTcgQzI2LjczMDE2NzIsMzAxLjg3NDUxNSAyMS42MTQ0NDgyLDMwMi4wMjAwNjcgMTYuNTUwMTAwMywzMDEuNTE0OTE2IEMxMy4xMjEwNzAyLDMwMS4xNjM4OCA5LjU0MjIwNzM2LDMwMC41NjAyNjggNi42MjI2MDg3LDI5OC42MDM4OCBDNC43MzQ3MTU3MiwyOTcuNDA1MjE3IDMuNzIwMTMzNzgsMjk1LjI5MDQzNSAzLjAzMDkwMzAxLDI5My4yMzk4NjYgQzEuNjQ4MTYwNTQsMjg4Ljk2NzQ5MiAxLjQ3MjY0MjE0LDI4NC40Mjk2OTkgMS4yODQyODA5NCwyNzkuOTc3NTI1IEMxLjI2Mjg3NjI1LDI3NC4wOTU1MTggMS4zNzQxODA2LDI2OC4xNTM1NzkgMi41MjE0NzE1NywyNjIuMzY1NzUzIEMzLjE0MjIwNzM2LDI1OS42NjQ0ODIgMy44OTU2NTIxNywyNTYuNjkzNTEyIDYuMTc3MzkxMywyNTQuODkxMjM3IEM5LjM5MjM3NDU4LDI1Mi41NTgxMjcgMTMuNDgwNjY4OSwyNTEuOTkzMDQzIDE3LjMyOTIzMDgsMjUxLjU5MDYzNSBaIE0xOC4xNjQwMTM0LDI1OS42NTE2MzkgQzE2LjA0MDY2ODksMjU5Ljk3MjcwOSAxMy4zOTUwNTAyLDI2MC4xNDgyMjcgMTIuMTE1MDUwMiwyNjIuMTI2MDIgQzEwLjk5NzcyNTgsMjY1LjA3NTU4NSAxMS4wMzYyNTQyLDI2OC4yOTQ4NDkgMTAuODA5MzY0NSwyNzEuMzk4NTI4IEMxMC43MDIzNDExLDI3Ni45MzM3NzkgMTAuNDI0MDgwMywyODIuNTIwNDAxIDExLjI4MDI2NzYsMjg4LjAxMjg0MyBDMTEuNTk3MDU2OSwyODkuODY2NDg4IDEyLjI0Nzc1OTIsMjkyLjA3NTQ1MiAxNC4zMDY4ODk2LDI5Mi42MTkxMyBDMTguNzcxOTA2NCwyOTMuOTg0NzQ5IDIzLjU0OTQzMTQsMjkzLjc1MzU3OSAyOC4xNTE0MzgxLDI5My40OTI0NDEgQzMwLjQ0NjAyMDEsMjkzLjE0MTQwNSAzMy40ODk3NjU5LDI5Mi45NDQ0ODIgMzQuNjA3MDkwMywyOTAuNTQyODc2IEMzNS44ODcwOTAzLDI4Ni44ODY5NTcgMzUuNzk3MTkwNiwyODIuOTM5OTMzIDM1Ljk1NTU4NTMsMjc5LjEyMTMzOCBDMzUuOTA0MjE0LDI3My43NTMwNDMgMzYuMjAzODc5NiwyNjguMjgyMDA3IDM0LjkxOTU5ODcsMjYzLjAyOTI5OCBDMzQuNjExMzcxMiwyNjEuMTYyODA5IDMyLjY3NjM4OCwyNjAuMzY2NTU1IDMxLjAzNjc4OTMsMjYwLjAzNjkyMyBDMjYuODA3MjI0MSwyNTkuMjA2NDIxIDIyLjQ0MDY2ODksMjU5LjMwOTE2NCAxOC4xNjQwMTM0LDI1OS42NTE2MzkgWiBNNjMuMjU5Mzk4LDI2OC4zMjA1MzUgQzY2LjMyNDU0ODUsMjY2LjM3MjcwOSA3MC4xMzAzMDEsMjY2LjA1NTkyIDczLjY2NjM1NDUsMjY2LjM3Njk5IEM3Ni45NjY5NTY1LDI2Ni42NTk1MzIgODAuNjMxNDM4MSwyNjcuNzgxMTM3IDgyLjM5OTQ2NDksMjcwLjgyMDYwMiBDODQuNTA5OTY2NiwyNzQuNjM0OTE2IDg0LjYyOTgzMjgsMjc5LjE0Mjc0MiA4NC43NzUzODQ2LDI4My4zOTc5OTMgQzg0LjY4MTIwNCwyODcuNzczMTEgODQuNTk5ODY2MiwyOTIuMzQwODcgODIuNzkzMzExLDI5Ni40MDc3NTkgQzgxLjc2MTYwNTQsMjk4Ljg3Nzg2IDc5LjM4OTk2NjYsMzAwLjQ5NjA1NCA3Ni44NTEzNzEyLDMwMS4xMzM5MTMgQzcyLjk2NDI4MDksMzAyLjA4ODU2MiA2OC42OTE5MDY0LDMwMi4xOTEzMDQgNjQuOTQ2MDg3LDMwMC42NDE2MDUgQzYyLjkyMTIwNCwyOTkuODQ5NjMyIDYxLjUyMTMzNzgsMjk4LjEyODY5NiA2MC4zNjEyMDQsMjk2LjM2NDk1IEw2MC4zNjEyMDQsMzE2LjM2MTIwNCBMNTEuNzk5MzMxMSwzMTYuMzYxMjA0IEM1MS44MDM2MTIsMjk5LjgxMTEwNCA1MS43OTA3NjkyLDI4My4yNTY3MjIgNTEuODAzNjEyLDI2Ni43MDY2MjIgQzU0LjU3MzM3NzksMjY2LjY5Mzc3OSA1Ny4zNDMxNDM4LDI2Ni42OTM3NzkgNjAuMTA4NjI4OCwyNjYuNzA2NjIyIEM2MC4wMTQ0NDgyLDI2OC40MTA0MzUgNTkuOTIwMjY3NiwyNzAuMTA5OTY3IDU5Ljg3MzE3NzMsMjcxLjgxODA2IEM2MC45MDA2MDIsMjcwLjU2Mzc0NiA2MS44NTUyNTA4LDI2OS4xODUyODQgNjMuMjU5Mzk4LDI2OC4zMjA1MzUgWiBNNjYuMDQ2Mjg3NiwyNzIuNzg5ODMzIEM2NC4wMDg1NjE5LDI3Mi45NDgyMjcgNjEuNzkxMDM2OCwyNzMuOTU4NTI4IDYxLjIxMzExMDQsMjc2LjA5MDQzNSBDNjAuMTIxNDcxNiwyNzkuODQ5MDk3IDYwLjMxNDExMzcsMjgzLjgzMDM2OCA2MC40NzI1MDg0LDI4Ny43MDAzMzQgQzYwLjczNzkyNjQsMjkwLjIyMTgwNiA2MS4wNTA0MzQ4LDI5My40NzEwMzcgNjMuNzM0NTgxOSwyOTQuNjAxMjA0IEM2Ni42MTk5MzMxLDI5NS43MTg1MjggNjkuOTUwNTAxNywyOTUuNjU4NTk1IDcyLjg3MDEwMDMsMjk0LjcwMzk0NiBDNzUuMzk1ODUyOCwyOTMuODEzNTEyIDc1Ljc2NDAxMzQsMjkwLjg0MjU0MiA3Ni4wMjk0MzE0LDI4OC41NDc5NiBDNzYuMjk0ODQ5NSwyODQuNzQ2NDg4IDc2LjM4OTAzMDEsMjgwLjg2Nzk2IDc1LjY0NDE0NzIsMjc3LjExMzU3OSBDNzUuMzkxNTcxOSwyNzUuNjU4MDYgNzQuNjQyNDA4LDI3NC4xNTU0NTIgNzMuMjIxMTM3MSwyNzMuNTQzMjc4IEM3MC45Nzc5MjY0LDI3Mi41NTQzODEgNjguNDQzNjEyLDI3Mi42MDU3NTMgNjYuMDQ2Mjg3NiwyNzIuNzg5ODMzIFogTTk1LjAxOTY2NTYsMjY4LjM4NDc0OSBDOTkuMjI3ODI2MSwyNjYuMjIyODc2IDEwNC4xNTUxODQsMjY2LjE0NTgxOSAxMDguNzc0MzE0LDI2Ni4zNjQxNDcgQzExMi42MTg1OTUsMjY2LjY4NTIxNyAxMTcuMjg0ODE2LDI2Ny4zMjczNTggMTE5LjQwMzg4LDI3MS4wMDQ2ODIgQzEyMS43OTI2NDIsMjc1LjQ0NDAxMyAxMjEuNDAzMDc3LDI4MC42NjY3NTYgMTIxLjczNjk5LDI4NS41Mzg0NjIgTDk4LjMxNTk4NjYsMjg1LjUzODQ2MiBDOTguNTg5OTY2NiwyODguMDUxMzcxIDk4LjI2NDYxNTQsMjkwLjc2MTIwNCA5OS41MzE3NzI2LDI5My4wNjQzNDggQzEwMC42MTQ4NDksMjk0Ljg4Mzc0NiAxMDIuOTEzNzEyLDI5NS4yNTYxODcgMTA0Ljg1NzI1OCwyOTUuMzYzMjExIEMxMDcuMjU4ODYzLDI5NS4zODAzMzQgMTA5Ljg0NDU0OCwyOTUuNTc3MjU4IDExMi4wNTc3OTMsMjk0LjQ1OTkzMyBDMTEzLjMyNDk1LDI5My40NjY3NTYgMTEzLjMzMzUxMiwyOTEuNzAzMDEgMTEzLjQ5NjE4NywyOTAuMjQ3NDkyIEMxMTYuMjM1OTg3LDI5MC4yNDMyMTEgMTE4Ljk3NTc4NiwyOTAuMjQzMjExIDEyMS43MTU1ODUsMjkwLjI0NzQ5MiBDMTIxLjYxMjg0MywyOTMuMTA3MTU3IDEyMS4yNDQ2ODIsMjk2LjMwOTI5OCAxMTguOTUwMSwyOTguMzIxMzM4IEMxMTUuNTAzOTQ2LDMwMS40MTIxNzQgMTEwLjU3MjMwOCwzMDEuNzMzMjQ0IDEwNi4xNjI5NDMsMzAxLjgxODg2MyBDMTAyLjI3MTU3MiwzMDEuNzAzMjc4IDk4LjE2MTg3MjksMzAxLjUwNjM1NSA5NC42NzcxOTA2LDI5OS41ODg0OTUgQzkxLjg1NjA1MzUsMjk3LjkyMzIxMSA5MC45NTcwNTY5LDI5NC41MDI3NDIgOTAuNDYwNDY4MiwyOTEuNDg4OTYzIEM4OS44MzExNzA2LDI4Ny4wMTExMDQgODkuNjcyNzc1OSwyODIuNDQ3NjI1IDkwLjIwNzg5MywyNzcuOTUyNjQyIEM5MC42NDQ1NDg1LDI3NC40MDM3NDYgOTEuNTk5MTk3MywyNzAuMjI5ODMzIDk1LjAxOTY2NTYsMjY4LjM4NDc0OSBaIE0xMDAuMDI0MDgsMjczLjgzNDM4MSBDOTguMjM0NjQ4OCwyNzUuNDY1NDE4IDk4LjQxMDE2NzIsMjc4LjE3MDk3IDk4LjMzMzExMDQsMjgwLjM4ODQ5NSBDMTAzLjM2NzQ5MiwyODAuNDE0MTgxIDEwOC40MDE4NzMsMjgwLjQwMTMzOCAxMTMuNDQwNTM1LDI4MC4zOTI3NzYgQzExMy40MzE5NzMsMjc4LjM5Nzg2IDExMy42MjQ2MTUsMjc2LjIyMzE0NCAxMTIuNTQ1ODE5LDI3NC40NDY1NTUgQzExMS40ODg0MjgsMjczLjAwODE2MSAxMDkuNTA2MzU1LDI3Mi45MTM5OCAxMDcuODc5NTk5LDI3Mi43Mzg0NjIgQzEwNS4yNTUzODUsMjcyLjY5OTkzMyAxMDIuMzYxNDcyLDI3Mi40MTMxMSAxMDAuMDI0MDgsMjczLjgzNDM4MSBaIE0xMzkuOTY5NDk4LDI2OC4zNjMzNDQgQzE0Mi45MzE5MDYsMjY2LjMwODQ5NSAxNDYuNzU5MDY0LDI2Ni4wMjE2NzIgMTUwLjI0Mzc0NiwyNjYuNDI0MDggQzE1My4yMTA0MzUsMjY2LjczNjU4OSAxNTYuMzUyNjQyLDI2Ny44NjY3NTYgMTU4LjEwMzU0NSwyNzAuNDI2NzU2IEMxNTkuNjU3NTI1LDI3Mi41NTAxIDE2MC4wODk5LDI3NS4yNTU2NTIgMTYwLjExMTMwNCwyNzcuODI4NDk1IEMxNjAuMDk4NDYyLDI4NS42Nzk3MzIgMTYwLjExNTU4NSwyOTMuNTI2Njg5IDE2MC4xMDcwMjMsMzAxLjM3NzkyNiBDMTU3LjM5MjkxLDMwMS4zODIyMDcgMTU0LjY4MzA3NywzMDEuMzgyMjA3IDE1MS45Nzc1MjUsMzAxLjM3NzkyNiBDMTUxLjk2NDY4MiwyOTMuOTUwNTAyIDE1MS45ODYwODcsMjg2LjUyNzM1OCAxNTEuOTY0NjgyLDI3OS4xMDQyMTQgQzE1MS44ODMzNDQsMjc3LjQ4MTczOSAxNTEuOTQ3NTU5LDI3NS42MDY2ODkgMTUwLjcyNzQ5MiwyNzQuMzU2NjU2IEMxNDkuNDI2MDg3LDI3Mi45NDgyMjcgMTQ3LjM4NDA4LDI3Mi42NzQyNDcgMTQ1LjU2NDY4MiwyNzIuNjg3MDkgQzE0My4zNjQyODEsMjcyLjY3NDI0NyAxNDAuOTg0MDgsMjczLjA1MDk3IDEzOS4yODg4MjksMjc0LjU3MDcwMiBDMTM3LjYzMjEwNywyNzUuOTgzNDExIDEzNy4wMDI4MDksMjc4LjI2MDg3IDEzNi45OTQyNDcsMjgwLjM2NzA5IEMxMzYuOTgxNDA1LDI4Ny4zNzA3MDIgMTM2Ljk5ODUyOCwyOTQuMzc0MzE0IDEzNi45ODU2ODYsMzAxLjM3MzY0NSBDMTM0LjI3NTg1MywzMDEuMzgyMjA3IDEzMS41NjYwMiwzMDEuMzgyMjA3IDEyOC44NjA0NjgsMzAxLjM3NzkyNiBDMTI4Ljg1NjE4NywyODkuODE5Mzk4IDEyOC44NTYxODcsMjc4LjI2MDg3IDEyOC44NjA0NjgsMjY2LjcwMjM0MSBDMTMxLjUyMzIxMSwyNjYuNjkzNzc5IDEzNC4xOTAyMzQsMjY2LjY5ODA2IDEzNi44NTI5NzcsMjY2LjcwMjM0MSBDMTM2Ljg0MDEzNCwyNjguNzMxNTA1IDEzNi42Mzg5MywyNzAuNzQ3ODI2IDEzNi41Nzg5OTcsMjcyLjc3Njk5IEMxMzcuNDUyMzA4LDI3MS4xMzczOTEgMTM4LjM2ODQyOCwyNjkuNDA3ODkzIDEzOS45Njk0OTgsMjY4LjM2MzM0NCBaIE0xNzQuODI5MTY0LDI1My4xNzQ1ODIgQzE3OS4zMTU1ODUsMjUxLjY2NzY5MiAxODQuMDk3MzkxLDI1MS40NTM2NDUgMTg4Ljc4OTI5OCwyNTEuMjg2Njg5IEMxOTMuMzM1NjUyLDI1MS4zMDgwOTQgMTk4LjA4NzQ5MiwyNTEuMzUwOTAzIDIwMi4zMzQxODEsMjUzLjE4MzE0NCBDMjA0LjQ5MTc3MywyNTQuMDgyMTQgMjA1Ljk4NTgxOSwyNTYuMDUxMzcxIDIwNi43MTM1NzksMjU4LjIyNjA4NyBDMjA3Ljg5OTM5OCwyNjEuNDc1MzE4IDIwNy45MzM2NDUsMjY0Ljk5NDI0NyAyMDcuOTU5MzMxLDI2OC40MTQ3MTYgQzIwNC44Mjk5NjcsMjY4LjQxNDcxNiAyMDEuNzAwNjAyLDI2OC40MjMyNzggMTk4LjU3NTUxOCwyNjguNDEwNDM1IEMxOTguNTI0MTQ3LDI2Ni4wMDQ1NDggMTk4LjcwODIyNywyNjMuMzA3NTU5IDE5Ny4yMTg0NjIsMjYxLjI2MTI3MSBDMTk1LjcxMTU3MiwyNTkuNzIwMTM0IDE5My4zNTcwNTcsMjU5LjcyNDQxNSAxOTEuMzU3ODYsMjU5LjQ4ODk2MyBDMTg3LjI5MDk3LDI1OS40MTE5MDYgMTgzLjA1NzEyNCwyNTkuMTUwNzY5IDE3OS4xNjE0NzIsMjYwLjU1NDkxNiBDMTc3Ljc1NzMyNCwyNjEuMDAwMTM0IDE3Ny4wMjk1NjUsMjYyLjQwNDI4MSAxNzYuNzQ3MDIzLDI2My43NTcwNTcgQzE3NS45NDY0ODgsMjY3LjM4NzI5MSAxNzUuOTQyMjA3LDI3MS4xMzMxMSAxNzUuOTQ2NDg4LDI3NC44MzYxMiBDMTc1Ljk5MzU3OSwyNzkuNzg0ODgzIDE3NS45MTY1MjIsMjg0LjgwNjQyMSAxNzYuOTczOTEzLDI4OS42NzM4NDYgQzE3Ny4yNTIxNzQsMjkxLjQ1NDcxNiAxNzguODkxNzczLDI5Mi41NTA2MzUgMTgwLjUzNTY1MiwyOTIuOTQ0NDgyIEMxODQuMzM3MTI0LDI5My44OTA1NjkgMTg4LjMwNTU1MiwyOTMuNzUzNTc5IDE5Mi4xODgzNjEsMjkzLjUyMjQwOCBDMTk0LjIxMzI0NCwyOTMuMjU2OTkgMTk2LjY3OTA2NCwyOTMuMTI0MjgxIDE5Ny45NTA1MDIsMjkxLjI2NjM1NSBDMTk5LjMwNzU1OSwyODkuMDQ4ODI5IDE5OS4wODA2NjksMjg2LjMyMTg3MyAxOTkuMDA3ODkzLDI4My44MzAzNjggQzIwMi4xNjcyMjQsMjgzLjgxNzUyNSAyMDUuMzIyMjc0LDI4My44MjE4MDYgMjA4LjQ4MTYwNSwyODMuODMwMzY4IEMyMDguNDQzMDc3LDI4Ny43NjQ1NDggMjA4LjM3NDU4MiwyOTEuODI3MTU3IDIwNi45NDQ3NDksMjk1LjU1MTU3MiBDMjA2LjIwODQyOCwyOTcuNDk5Mzk4IDIwNC42ODg2OTYsMjk5LjE1MTgzOSAyMDIuNzE5NDY1LDI5OS44OTY3MjIgQzE5OC44NTM3NzksMzAxLjQ0NjQyMSAxOTQuNjE1NjUyLDMwMS41NDQ4ODMgMTkwLjUxNDUxNSwzMDEuNzkzMTc3IEMxODUuNzU4Mzk1LDMwMS44NzQ1MTUgMTgwLjk0MjM0MSwzMDEuNzU4OTMgMTc2LjI5MzI0NCwzMDAuNjUwMTY3IEMxNzMuNTY2Mjg4LDI5OS45Mzk1MzIgMTcwLjU4Njc1NiwyOTguNjg5NDk4IDE2OS4zMjM4OCwyOTUuOTc5NjY2IEMxNjcuNzA5OTY3LDI5Mi4zOTY1MjIgMTY3LjQxNDU4MiwyODguNDEwOTcgMTY2Ljk5OTMzMSwyODQuNTUzODQ2IEMxNjYuNjUyNTc1LDI3OS40NTk1MzIgMTY2LjQyOTk2NywyNzQuMzU2NjU2IDE2Ni41NTQxMTQsMjY5LjI1Mzc3OSBDMTY2Ljc5ODEyNywyNjUuMTIyNjc2IDE2Ny4xNzQ4NDksMjYwLjc2ODk2MyAxNjkuNDA1MjE3LDI1Ny4xNjg2OTYgQzE3MC41OTEwMzcsMjU1LjE2NTIxNyAxNzIuNjcxNTcyLDI1My45MTA5MDMgMTc0LjgyOTE2NCwyNTMuMTc0NTgyIFogTTIxMC4wMjI3NDIsMjUxLjczMTkwNiBDMjEzLjI4NDgxNiwyNTEuNzM2MTg3IDIxNi41NDY4OSwyNTEuNjQyMDA3IDIxOS44MDQ2ODIsMjUxLjc3ODk5NyBDMjIyLjk3Njg1NiwyNjEuODQzNDc4IDIyNi40NjE1MzgsMjcxLjgwNTIxNyAyMjkuNjYzNjc5LDI4MS44NTY4NTYgQzIzMC45MDk0MzEsMjg1LjcxODI2MSAyMzEuNzkxMzA0LDI4OS42OTA5NyAyMzMuMDc5ODY2LDI5My41Mzk1MzIgQzIzNC41MjI1NDIsMjg5LjM4NzAyMyAyMzUuNDQ3MjI0LDI4NS4wNzE4MzkgMjM2Ljg1OTkzMywyODAuOTEwNzY5IEMyMzkuOTg5Mjk4LDI3MS4xODg3NjMgMjQzLjIwNDI4MSwyNjEuNDk2NzIyIDI0Ni4zMjkzNjUsMjUxLjc3NDcxNiBDMjQ5LjU0ODYyOSwyNTEuNjM3NzI2IDI1Mi43NzY0NTUsMjUxLjc1NzU5MiAyNTYsMjUxLjcxNDc4MyBMMjU2LDI1Mi43ODA3MzYgQzI1MC43MDAyMDEsMjY4LjkzMjcwOSAyNDUuNTI0NTQ4LDI4NS4xMjc0OTIgMjQwLjMzMTc3MywzMDEuMzE3OTkzIEMyMzUuNDg1NzUzLDMwMS40MTY0NTUgMjMwLjYzMTE3MSwzMDEuNDI5Mjk4IDIyNS43ODUxNTEsMzAxLjMwOTQzMSBDMjIwLjYyMjM0MSwyODQuNzU1MDUgMjE1LjIxMTIzNywyNjguMjc3NzI2IDIxMC4wMjI3NDIsMjUxLjczMTkwNiBaIiBmaWxsPSIjMDUwNTA1Ij48L3BhdGg+Cgk8L2c+PC9zdmc+',
+ ultralytics:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii0wLjQ4IDEuMTcyIDI0Ljk2IDIxLjY0OSIgd2lkdGg9IjI0Ljk2IiBoZWlnaHQ9IjIxLjY1IiBmaWxsPSIjMTExRjY4Ij48cGF0aCBkPSJtMTIuNzM2IDcuMzQxLS4wMDIgMi44OTdjLjAxMiAzLjk1My0zLjE4OCA3LjE3Ny03LjA5OCA3LjE3MS0xLjU1My0uMDAzLTIuOTY3LS40OC00LjExMi0xLjMxMyAyLjA1NiAzLjcyNSA1Ljk5OSA2LjI0IDEwLjQ4IDYuMjQ1IDYuNTExLS4wMDMgMTEuODkxLTUuMzQzIDExLjk5Mi0xMS45MWwtLjAwMi0uMDI3Yy4wMDYtLjE1MSAwLTIuOTUxLjAwNi0zLjA3NS0uMDEtMy4xMTYtMi41MzgtNS42NzctNS42My01LjY3LTMuMTA1LS4wMDYtNS42NDUgMi41NC01LjYzNCA1LjY4M3pNNS42MjkgNC41NzNDMi41MjUgNC41NzMgMCA3LjExOCAwIDEwLjI0NnMyLjUyNSA1LjY3MyA1LjYzIDUuNjczYzMuMTAzIDAgNS42MjktMi41NDUgNS42MjktNS42NzNzLTIuNTI2LTUuNjczLTUuNjMtNS42NzMiLz48L3N2Zz4='
+};
+
+// Self-contained portfolio illustrations. All walkthrough messages are illustrative.
+// Real product logos come from logos.js (loaded first); everything else is an inline line glyph.
+const paths={
+ spark:'<path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6Z"/>',
+ chat:'<path d="M21 11.5a8.5 8.5 0 0 1-12.8 7.3L3 21l1.8-5.2A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 10h8M8 14h5"/>',
+ brain:'<path d="M12 5a3 3 0 0 0-5-2 4 4 0 0 0-4 6 4 4 0 0 0 0 7 4 4 0 0 0 4 5 3 3 0 0 0 5-2V5Zm0 0a3 3 0 0 1 5-2 4 4 0 0 1 4 6 4 4 0 0 1 0 7 4 4 0 0 1-4 5 3 3 0 0 1-5-2"/><path d="M7 7v4H4m13-4v4h3M7 17h5m5-2h-5"/>',
+ book:'<path d="M12 5C9 3 5 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-7-1-10 1v16Z"/><path d="M6 8h3m6 0h3M6 12h3m6 0h3"/>',
+ shield:'<path d="m12 2 9 4v6c0 5-6 9-9 10-3-1-9-5-9-10V6l9-4Z"/><path d="m8 12 3 3 5-6"/>',
+ person:'<circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/>',
+ check:'<path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18m-13 5h2m4 0h2"/>',
+ file:'<path d="M14 2H5v20h14V7l-5-5Zm0 0v5h5M8 12h8m-8 4h6"/>',
+ arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',
+ back:'<path d="M20 12H4m6-6-6 6 6 6"/>',
+ play:'<path d="m8 4 12 8-12 8Z"/>',pause:'<path d="M8 4v16M16 4v16"/>',
+ repeat:'<path d="M3 10a9 9 0 1 1 2 8M3 3v7h7"/>',
+ network:'<rect x="8" y="2" width="8" height="6" rx="1"/><rect x="1" y="17" width="8" height="5" rx="1"/><rect x="15" y="17" width="8" height="5" rx="1"/><path d="M12 8v5H5v4m7-4h7v4"/>',
+ search:'<circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/>',
+ layers:'<path d="m12 2 10 6-10 6L2 8l10-6Zm-10 11 10 6 10-6M2 18l10 6 10-6"/>',
+ phone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
+ database:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+ pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+ scan:'<path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3m0 8v3a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2v-3"/><rect x="8" y="9" width="8" height="6" rx="1"/>',
+ minus:'<path d="M5 12h14"/>',plus:'<path d="M12 5v14M5 12h14"/>'
+};
+function icon(name,small=false){return `<svg class="icon${small?' small-icon':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.spark}</svg>`;}
+const LOGOS=typeof logos==='object'?logos:{};
+function logo(name){return `<img class="logo" src="${LOGOS[name]}" alt="" decoding="async">`;}
+// A real product shows its own logo; a responsibility with no product behind it shows a glyph.
+function mark(n){return n.logo&&LOGOS[n.logo]?logo(n.logo):icon(n.icon);}
+function chip([text,key]){return `<span class="tag">${key&&LOGOS[key]?logo(key):''}${text}</span>`;}
+
+const nodes=[
+ {id:'mobile',x:25,y:70,title:'Technician mobile app',sub:'Field photos',icon:'phone',group:'product',description:'Technicians photograph each installation step in a mobile app. The photos are saved against the work order, so they never pass through the review application on upload.',tags:[['Field photos'],['One set per work order']],why:'Capture and review are separate systems. The detectors only ever see photos that are already stored.'},
+ {id:'database',x:363,y:70,title:'Work-order database',sub:'Data and decisions',icon:'database',group:'data',description:'Holds each work order with the equipment data the photos are checked against. It also receives the AI result and the reviewer’s decision for every checked item.',tags:[['Expected equipment data'],['AI result per check'],['Reviewer decision'],['Reviewer note']],why:'Keeping the suggestion and the decision in one record is what makes agreement measurable and retraining possible.'},
+ {id:'storage',x:701,y:70,title:'Evidence photo storage',sub:'Object storage',icon:'image',group:'data',description:'Keeps the photographs the technicians upload. The review application loads a photo from here when a reviewer opens the work order.',tags:[['Object storage'],['Read by the review application']],why:'Image bytes stay in storage. The database only tracks which photo belongs to which work order.'},
+ {id:'eq1',x:25,y:245,title:'Equipment 1 detector API',sub:'YOLOv10m · OCR',logo:'fastapi',icon:'scan',group:'intelligence',description:'Finds the equipment in the photo, whether it is open or closed, and the region holding its identifier. There is one specialist model per equipment variant. The identifier crop is prepared with OpenCV, then read by RapidOCR when printed or TrOCR when handwritten.',tags:[['Python','python'],['FastAPI','fastapi'],['YOLOv10m','ultralytics'],['OpenCV','opencv'],['RapidOCR'],['TrOCR'],['Docker','docker']],why:'Finding a text region does not prove the text was read correctly, so detection, reading and matching are evaluated separately.'},
+ {id:'eq2',x:25,y:420,title:'Equipment 2 detector API',sub:'YOLO OBB · rules',logo:'fastapi',icon:'scan',group:'intelligence',description:'An oriented-box model finds the label, its QR code, the cable and the serial text. Rules on top score blur per region and measure the distance between label and cable, and return a specific reason when the evidence is invalid.',tags:[['Python','python'],['FastAPI','fastapi'],['YOLO OBB','ultralytics'],['OpenCV','opencv'],['Blur score'],['Proximity rule']],why:'These checks are visual heuristics. They do not prove a physical connection or a decoded QR code.'},
+ {id:'health',x:363,y:332,title:'Health and logs',sub:'Readiness · diagnostics',icon:'pulse',group:'intelligence',description:'Each service reports whether its models are loaded, and logs start-up, inference and text-reading failures with their reasons.',tags:[['Health endpoints'],['Inference logs'],['OCR failure reasons']],why:'Alerting is not built yet. Today these are the signals an operator reads.'},
+ {id:'app',x:701,y:245,title:'Review application',sub:'Queue · permission',logo:'php',icon:'layers',group:'product',description:'The existing web application where reviewers work. It checks the session and the AI feature permission, sends each photo to the right detector, compares the result with the work order and pre-fills the suggested checks.',tags:[['PHP','php'],['HTTP multipart bridge'],['One photo at a time'],['Two analyses at most'],['Timeouts and status checks']],why:'This is a shared codebase. My part is the bridge to the detectors, the queue, the concurrency limit and the suggestion and error states.'},
+ {id:'reviewer',x:701,y:420,title:'QC reviewer',sub:'Reviews and submits',icon:'person',group:'product',description:'Sees the suggested checks and their explanations in the review form, then approves or rejects each one. A rejection carries a note.',tags:[['Human decision'],['Approve or reject'],['Note on rejection']],why:'The models still need to be evaluated against real reviewer decisions, so the AI only suggests.'}
+];
+const edges=[
+ ['mobile','database','M239 111H363','field photos',262,99],
+ ['storage','app','M808 152V245','orders + photos',818,203],
+ ['app','database','M730 245V200H470V152','AI results + reviewer decisions',484,192],
+ ['app','eq1','M701 286H239','multipart request · check results',262,276],
+ ['app','eq2','M701 310H640V461H239','multipart request · check results',262,451],
+ ['eq1','health','M132 327V373H363','',0,0],
+ ['eq2','health','M132 420V373H363','',0,0],
+ ['app','reviewer','M808 327V420','suggested checks',818,378]
+];
+// This page has no journeys: it is the architecture view only.
+const scenarios={};
+const toolchain=[
+ ['Training',[['Python','python'],['Ultralytics','ultralytics'],['GPU notebooks'],['Pseudo-labelling'],['Content-hash dedup']]],
+ ['Testing & checks',[['pytest','pytest'],['Mocked models'],['Malformed images'],['Tiny text crops'],['Blur and proximity cases']]],
+ ['Operations & limits',[['Docker','docker'],['Linux service'],['Health endpoints'],['Diagnostic logs']],'Alerting and service-to-service authentication are still to be added.']
+];
+const isFlow=document.body.dataset.view==='flow';
+const embedded=new URLSearchParams(location.search).get('embed')==='1';
+if(embedded){document.body.classList.add('embed');document.documentElement.classList.add('embed');}
+// Motion is opt-out: with reduced motion nothing animates and nothing starts hidden.
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!calm)document.documentElement.classList.add('motion');
+let selected='app',filter='all',scenario='answer',step=0,timer=null,scale=1,zoom=1,tourIndex=0,shown='';
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const words=t=>t.split(' ').map((w,i)=>`<span class="w" style="--i:${i}">${w}</span>`).join(' ');
+const cur=on=>on?'class="current" aria-current="page"':'';
+const takeaways=isFlow?[
+ ['Answers with evidence','Business knowledge and live departure data inform every response.'],['Human judgment stays central','Sensitive replies and deposit verification go through staff.'],['One connected operation','Conversations, approvals and bookings update the same workspace.']
+]:[
+ ['One service per equipment type','Each detector has its own model, its own rules and its own API.'],['Authority outside the model','The AI suggests each check. A reviewer decides.'],['Decisions become data','Every suggestion is stored with the reviewer’s decision, for evaluation and retraining.']
+];
+$('#app').innerHTML=`<div class="scroll-progress" aria-hidden="true"></div><div class="shell"><header class="topline"><a class="brand" href="ai-detection-architecture.html">AI Detection System</a></header><section class="intro"><h1>${words(isFlow?'':'The architecture behind AI photo verification.')}</h1><p data-reveal>${isFlow?'':'Field photos from a technician’s mobile app are checked by two detector services. Eight parts turn a photo into a suggested check that a reviewer decides on.'}</p><p class="meta" data-reveal>Work under NDA · generic names</p></section><section class="workspace ${isFlow?'flow':''}" data-reveal aria-label="${isFlow?'Application journey explorer':'Interactive architecture explorer'}"><div class="toolbar"><div class="filters" role="group" aria-label="${isFlow?'Choose a journey':'Filter technology layers'}">${isFlow?Object.entries(scenarios).map(([id,s])=>`<button class="pill" data-scenario="${id}" aria-pressed="${id===scenario}">${s.label}</button>`).join(''):['all','product','intelligence','data'].map(id=>`<button class="pill" data-filter="${id}" aria-pressed="${id==='all'}">${{all:'All',product:'Apps & people',intelligence:'Detector services',data:'Work-order data'}[id]}</button>`).join('')}</div>${isFlow?'<span class="canvas-flag">Illustrative walkthrough</span>':`<button class="primary" id="tour">${icon('play',true)}<span>Trace a photo</span></button>`}</div><div class="canvas-layout"><div class="canvas-wrap"><div class="canvas-header"><strong id="canvas-title">${isFlow?'':'System architecture'}</strong><p id="canvas-sub">${isFlow?'':'Eight parts in three layers. Select one to see what it does and why it is there.'}</p></div><div class="stage-viewport"><div class="stage" role="group" aria-label="${isFlow?'Journey steps':'Architecture components'}"></div></div><div class="canvas-bottom">${isFlow?'<div class="step-nav" role="group" aria-label="Jump to a step"></div><div class="journey-status" aria-live="polite"></div>':''}<div class="zoom" role="group" aria-label="Diagram zoom"><button id="zoom-out" aria-label="Zoom out">${icon('minus',true)}</button><output id="zoom-label">Fit</output><button id="zoom-in" aria-label="Zoom in">${icon('plus',true)}</button><button id="zoom-fit" aria-label="Fit diagram to view">${icon('repeat',true)}</button></div></div></div><aside class="inspector" aria-label="Selected ${isFlow?'step':'component'} details"></aside></div></section><section class="takeaways" aria-label="Project highlights">${takeaways.map(([t,p],i)=>`<div class="takeaway" data-reveal style="--i:${i}"><strong>${t}</strong><p>${p}</p></div>`).join('')}</section><footer class="footer" data-reveal><span>${isFlow?'Sample messages, not live customer data. No messages are sent and no payments are processed.':'Generic names stand in for the client’s equipment. Built from the project implementation.'}</span><span>Product names and logos are trademarks of their owners.</span></footer></div>`;
+if(!isFlow){const extra=document.createElement('details');extra.className='toolchain';extra.dataset.reveal='';extra.innerHTML=`<summary>Development and quality tooling</summary><div class="toolchain-grid">${toolchain.map(([title,chips,note])=>`<div><strong>${title}</strong><div class="tags">${chips.map(chip).join('')}</div>${note?`<p>${note}</p>`:''}</div>`).join('')}</div>`;$('.workspace').after(extra);}
+const stage=$('.stage');
+function setPlaying(on){$('.workspace').classList.toggle('playing',on);}
+function fit(){const width=$('.stage-viewport').clientWidth;scale=Math.min(1,width/940)*zoom;stage.style.transform=`scale(${scale})`;$('.stage-viewport').style.height=`${600*scale}px`;$('.stage-viewport').style.minHeight='0';$('.stage-viewport').style.maxHeight=zoom>1?'750px':'';stage.style.marginRight=`${940*(scale-1)}px`;stage.style.marginLeft=`${Math.max(0,(width-940*scale)/2)}px`;$('#zoom-label').textContent=zoom===1?'Fit':`${Math.round(zoom*100)}%`;$('#zoom-out').disabled=zoom<=.8;$('#zoom-in').disabled=zoom>=1.6;}
+new ResizeObserver(fit).observe($('.canvas-wrap'));
+$('#zoom-in').onclick=()=>{zoom=Math.min(1.6,+(zoom+.2).toFixed(1));fit();};$('#zoom-out').onclick=()=>{zoom=Math.max(.8,+(zoom-.2).toFixed(1));fit();};$('#zoom-fit').onclick=()=>{zoom=1;fit();$('.stage-viewport').scrollTo(0,0);};
+// Each edge draws itself in on entry and carries a pulse that runs along it while the edge is active.
+function svgEdges(items){return `<svg class="connections" viewBox="0 0 940 600" aria-hidden="true"><defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="m0 0 7 3.5-7 3.5" fill="none" stroke="#a8a29e"/></marker></defs>${items.map(([a,b,p,label,x,y],i)=>`<path class="edge" pathLength="1" style="--e:${i}" data-from="${a}" data-to="${b}" d="${p}" marker-end="url(#arrow)"/><circle class="pulse" r="4" style="offset-path:path('${p}')"/>${label?`<text class="edge-label" x="${x}" y="${y}">${label}</text>`:''}`).join('')}</svg>`;}
+function nodeHTML(n,index,order){return `<button class="node" id="node-${n.id}" data-node="${n.id}" data-group="${n.group}" style="left:${n.x}px;top:${n.y}px;--i:${order}" aria-pressed="false" aria-controls="detail-content"><span class="badge${n.logo&&LOGOS[n.logo]?' has-logo':''}">${mark(n)}</span><span><strong>${n.title}</strong><small>${n.sub}</small></span>${index!==undefined?`<span class="number">${index+1}</span>`:''}</button>`;}
+// The detail panel animates only when its subject changes, not on every re-render.
+function detail(key,main,side){const swap=key!==shown;shown=key;$('.inspector').innerHTML=`<div id="detail-content" class="detail${swap?' swap':''}"><div class="detail-main">${main}</div><div class="detail-side">${side}</div></div>`;}
+function renderStack(){
+ stage.innerHTML=`<div class="group" style="left:337px;top:20px;width:594px;height:150px"><span class="group-label">Work-order data</span></div><div class="group" style="left:9px;top:205px;width:246px;height:315px"><span class="group-label">Python detector services</span></div><div class="group-label" style="left:26px;top:38px">In the field</div>${svgEdges(edges)}${nodes.map((n,i)=>nodeHTML(n,undefined,i)).join('')}<span class="note" style="left:702px;top:520px">The AI suggests, the reviewer decides</span>`;
+ $$('[data-node]').forEach(el=>el.onclick=()=>{stopTour();selectNode(el.dataset.node);});
+ selectNode(selected);
+}
+function selectNode(id){selected=id;const n=nodes.find(n=>n.id===id),connected=edges.filter(e=>e[0]===id||e[1]===id).map(e=>e[0]===id?e[1]:e[0]);
+ for(const item of nodes){const el=$(`#node-${item.id}`);el.classList.toggle('selected',item.id===id);el.setAttribute('aria-pressed',String(item.id===id));el.classList.toggle('connected',connected.includes(item.id));el.classList.toggle('dim',filter!=='all'&&item.group!==filter&&item.id!==id);}
+ $$('.edge').forEach(el=>{const active=el.dataset.from===id||el.dataset.to===id;el.classList.toggle('active',active);el.classList.toggle('dim',!active);});
+ detail(id,`<div class="inspector-top"><span>Component</span><span>${nodes.indexOf(n)+1} of ${nodes.length}</span></div><div class="detail-icon${n.logo&&LOGOS[n.logo]?' has-logo':''}">${mark(n)}</div><h2>${n.title}</h2><p class="description">${n.description}</p><div class="tags">${n.tags.map(chip).join('')}</div>`,`<div class="why"><div class="detail-label">Why it is built this way</div><p>${n.why}</p></div><div class="connect-list"><div class="detail-label">Connected to</div>${connected.map(id=>`<button data-connect="${id}">${nodes.find(n=>n.id===id).title}${icon('arrow',true)}</button>`).join('')}</div>`);
+ $$('[data-connect]').forEach(el=>el.onclick=()=>{stopTour();selectNode(el.dataset.connect);});
+}
+function stopTour(){clearInterval(timer);timer=null;setPlaying(false);if(!isFlow)$('#tour').innerHTML=icon('play',true)+'<span>Trace a photo</span>';}
+if(!isFlow){renderStack();$$('[data-filter]').forEach(el=>el.onclick=()=>{stopTour();filter=el.dataset.filter;$$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));if(filter!=='all')selected=nodes.find(n=>n.group===filter).id;selectNode(selected);});$('#tour').onclick=()=>{if(timer){stopTour();return;}filter='all';$$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));const tour=['mobile','storage','database','app','eq1','eq2','reviewer'];tourIndex=0;selectNode(tour[0]);$('#tour').innerHTML=icon('pause',true)+'<span>Pause trace</span>';setPlaying(true);timer=setInterval(()=>{tourIndex++;if(tourIndex>=tour.length){stopTour();return;}selectNode(tour[tourIndex]);},3000);};}
+function flowPositions(count){return count===6?[[75,85],[363,85],[651,85],[651,350],[363,350],[75,350]]:[[75,85],[363,85],[651,85],[651,350],[363,350]];}
+function renderFlow(){const s=scenarios[scenario],pos=flowPositions(s.steps.length);const fNodes=s.steps.map((s,i)=>({id:`step${i}`,x:pos[i][0],y:pos[i][1],title:s[1],sub:s[2],icon:s[0],logo:s[7],group:'step'}));const links=fNodes.slice(0,-1).map((n,i)=>{const next=fNodes[i+1];let p;if(n.y===next.y)p=next.x>n.x?`M${n.x+214} ${n.y+41}H${next.x}`:`M${n.x} ${n.y+41}H${next.x+214}`;else p=`M${n.x+107} ${n.y+82}V${next.y}`;return [n.id,next.id,p,'',0,0];});
+ stage.innerHTML=`${svgEdges(links)}<div style="left:75px;top:40px" class="group-label">The request</div><div style="left:75px;top:305px" class="group-label">The outcome</div>${fNodes.map((n,i)=>nodeHTML(n,i,i)).join('')}`;
+ $('#canvas-title').textContent=s.tag;$('#canvas-sub').textContent=s.subtitle;
+ $('.step-nav').innerHTML=s.steps.map((_,i)=>`<button data-step="${i}" aria-label="Step ${i+1}: ${s.steps[i][1]}">${i+1}</button>`).join('');
+ $$('[data-node]').forEach(el=>el.onclick=()=>{pauseFlow();step=Number(el.dataset.node.replace('step',''));updateFlow();});$$('[data-step]').forEach(el=>el.onclick=()=>{pauseFlow();step=Number(el.dataset.step);updateFlow();});updateFlow();fit();
+}
+function pauseFlow(){clearInterval(timer);timer=null;setPlaying(false);}
+function updateFlow(){const focused=document.activeElement?.id;const s=scenarios[scenario],data=s.steps[step],last=step===s.steps.length-1;
+ $$('[data-node]').forEach((el,i)=>{el.classList.toggle('selected',i===step);el.classList.toggle('done',i<step);el.setAttribute('aria-pressed',String(i===step));});
+ $$('.edge').forEach((el,i)=>{el.classList.toggle('active',i===step-1);el.classList.toggle('dim',i>=step);});
+ $$('[data-step]').forEach((el,i)=>{if(i===step)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+ $('.journey-status').textContent=data[1];
+ detail(scenario+step,`<div class="inspector-top"><span>${s.label}</span><span>Step ${step+1} of ${s.steps.length}</span></div><div class="progress-track"><div style="transform:scaleX(${(step+1)/s.steps.length})"></div></div><h2>${data[1]}</h2><p class="description">${data[5]}</p><div class="story-card"><div class="story-head">${data[7]&&LOGOS[data[7]]?logo(data[7]):icon(data[0])}${data[4]}</div><div class="bubble"><span>${data[3]}</span></div></div>`,`<div class="why"><div class="detail-label">In the system</div><p>${data[6]}</p></div><div class="control-row"><button class="secondary" id="prev" aria-label="Previous step" ${step===0?'disabled':''}>${icon('back',true)}</button><button class="primary" id="play">${icon(timer?'pause':last?'repeat':'play',true)}<span>${timer?'Pause':last?'Replay journey':'Play walkthrough'}</span></button><button class="secondary" id="next" aria-label="Next step" ${last?'disabled':''}>${icon('arrow',true)}</button></div>`);
+ if(['prev','next','play'].includes(focused))document.getElementById(focused)?.focus({preventScroll:true});
+ $('#prev').onclick=()=>{pauseFlow();step=Math.max(0,step-1);updateFlow();};$('#next').onclick=()=>{pauseFlow();step=Math.min(s.steps.length-1,step+1);updateFlow();};$('#play').onclick=()=>{if(timer){pauseFlow();updateFlow();return;}if(step===s.steps.length-1)step=0;setPlaying(true);timer=setInterval(()=>{step++;if(step>=s.steps.length-1){step=s.steps.length-1;pauseFlow();}updateFlow();},4500);updateFlow();};
+}
+// Entry motion: nodes rise in order and the connections draw themselves, once the diagram is on screen.
+let enterTimer;
+function playEnter(){if(calm)return;stage.classList.remove('pre','enter');void stage.offsetWidth;stage.classList.add('enter');clearTimeout(enterTimer);enterTimer=setTimeout(()=>stage.classList.remove('enter'),2600);}
+if(isFlow){renderFlow();$$('[data-scenario]').forEach(el=>el.onclick=()=>{pauseFlow();scenario=el.dataset.scenario;step=0;$$('[data-scenario]').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));renderFlow();playEnter();});}
+if(!calm){
+ stage.classList.add('pre');
+ const reveal=el=>{el.classList.add('in');if(el.classList.contains('workspace'))playEnter();};
+ if('IntersectionObserver' in window){const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){reveal(e.target);io.unobserve(e.target);}}),{threshold:.08});$$('[data-reveal]').forEach(el=>io.observe(el));}
+ else $$('[data-reveal]').forEach(reveal);
+ // Never leave the diagram hidden if the observer did not fire.
+ setTimeout(()=>{if(stage.classList.contains('pre')){$('.workspace').classList.add('in');playEnter();}},4000);
+ if(!embedded){const bar=$('.scroll-progress');const onScroll=()=>{const max=document.documentElement.scrollHeight-innerHeight;bar.style.transform=`scaleX(${max>0?Math.min(1,scrollY/max):0})`;};addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',onScroll);onScroll();}
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(isFlow){pauseFlow();updateFlow();}else stopTour();}});
+// Escape pauses playback. When nothing is playing inside an embed, tell the host page so its dialog can close.
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;if(timer){if(isFlow){pauseFlow();updateFlow();}else stopTour();}else if(embedded&&window.parent!==window)window.parent.postMessage({source:'ai-worker-illustration',action:'escape'},'*');});
+fit();
+</script></body></html>
