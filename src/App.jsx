@@ -2187,9 +2187,10 @@ function AiDetectionResults() {
           ))}
         </div>
         <p className="mt-2 text-xs text-stone-600 leading-relaxed max-w-3xl">
-          The extraction and matching changes are specified and simulated, not shipped yet. The larger
-          fix is upstream: store the identifier as structured fields, standardise the printed label,
-          and check the photo when it is taken.
+          The extraction and matching changes are shipped. These figures come from offline
+          simulation, so the changes still need the same evaluation in production as the detectors.
+          The larger fix is upstream: store the identifier as structured fields, standardise the
+          printed label, and check the photo when it is taken.
         </p>
       </div>
 
